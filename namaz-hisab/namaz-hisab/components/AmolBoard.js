@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PageHead from './PageHead';
-import { CheckIcon } from './Icons';
+import { CheckIcon, PlayIcon, PauseIcon } from './Icons';
+import { audioUrlByNumber, loadQari } from '../lib/recite';
 import { AMOLS } from '../lib/content/amols';
 import { DUAS } from '../lib/content/duas';
 import { POINTS } from '../lib/points';
@@ -26,8 +27,9 @@ function Tick({ on, onClick, busy }) {
 
 /* ---------- দোয়া ---------- */
 
-function DuaCard({ dua, on, onToggle, busy }) {
+function DuaCard({ dua, on, onToggle, busy, playing, onPlay }) {
   const [open, setOpen] = useState(false);
+  const canPlay = Array.isArray(dua.audio) && dua.audio.length > 0;
   return (
     <section className={'item-card' + (on ? ' done' : '')}>
       <header className="item-head">
@@ -35,7 +37,19 @@ function DuaCard({ dua, on, onToggle, busy }) {
           <b>{dua.title}</b>
           <small>{dua.when}</small>
         </button>
-        <Tick on={on} busy={busy} onClick={onToggle} />
+        <div className="ayah-acts">
+          {canPlay ? (
+            <button
+              type="button"
+              className={'ayah-play' + (playing ? ' on' : '')}
+              aria-label={playing ? 'থামান' : 'তিলাওয়াত শুনুন'}
+              onClick={() => onPlay(dua)}
+            >
+              {playing ? <PauseIcon /> : <PlayIcon />}
+            </button>
+          ) : null}
+          <Tick on={on} busy={busy} onClick={onToggle} />
+        </div>
       </header>
 
       {open ? (
@@ -79,6 +93,52 @@ export default function AmolBoard() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [playing, setPlaying] = useState(null); // কোন দোয়া বাজছে
+  const audioRef = useRef(null);
+  const queueRef = useRef([]);
+  const qariRef = useRef(null);
+
+  useEffect(() => {
+    qariRef.current = loadQari();
+    const a = audioRef.current;
+    return () => {
+      if (a) {
+        a.pause();
+        a.removeAttribute('src');
+      }
+    };
+  }, []);
+
+  // একটা দোয়ার আয়াতগুলো পরপর বাজে — দোয়াটা তো একটাই জিনিস।
+  // দোয়া শেষ হলে থেমে যায়, নিজে থেকে পরের দোয়ায় যায় না।
+  function playDua(dua) {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing === dua.id) {
+      a.pause();
+      queueRef.current = [];
+      setPlaying(null);
+      return;
+    }
+    queueRef.current = dua.audio.slice();
+    setPlaying(dua.id);
+    playNext();
+  }
+
+  function playNext() {
+    const a = audioRef.current;
+    const n = queueRef.current.shift();
+    if (n === undefined) {
+      setPlaying(null);
+      return;
+    }
+    a.src = audioUrlByNumber(n, qariRef.current || undefined);
+    a.play().catch(() => {
+      queueRef.current = [];
+      setPlaying(null);
+      setMsg('তিলাওয়াতটা চালানো গেল না');
+    });
+  }
 
   useEffect(() => {
     getTicks()
@@ -141,6 +201,7 @@ export default function AmolBoard() {
         </button>
       </div>
 
+      <audio ref={audioRef} preload="none" onEnded={playNext} />
       {msg ? <div className="auth-error">{msg}</div> : null}
       {loading ? <div className="empty-note">আনা হচ্ছে…</div> : null}
 
@@ -152,6 +213,8 @@ export default function AmolBoard() {
               dua={d}
               on={ticks.dua.includes(d.id)}
               busy={busy === 'dua:' + d.id}
+              playing={playing === d.id}
+              onPlay={playDua}
               onToggle={() => toggle('dua', d.id)}
             />
           ))}

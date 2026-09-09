@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { toBanglaUccharon } from '../lib/uccharon.js';
+import { globalAyah } from '../lib/quranMeta.js';
 
 const ROOT = process.cwd();
 const chapters = {};
@@ -28,6 +29,8 @@ function fromQuran(surah, from, to = from) {
     tr: vs.map((v) => toBanglaUccharon(v.text, surah, v.id)).join(' '),
     bn: vs.map((v) => v.translation).join(' '),
     ref: `সুরা ${c.transliteration} ${from}${to !== from ? '-' + to : ''}`,
+    // তিলাওয়াত শোনার জন্য আয়াতগুলোর বিশ্বজোড়া নম্বর
+    audio: vs.map((v) => globalAyah(surah, v.id)),
   };
 }
 

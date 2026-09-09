@@ -205,7 +205,13 @@ function analyze(src) {
   const at = [];
   s.forEach((c, k) => { if (isLetter(c)) at.push(k); });
 
-  const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1 };
+  const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1, lead: null };
+
+  // শব্দের প্রথম হরফে শাদ্দা মানে ইদগাম — আগের শব্দের শেষ "ন" এই হরফে মিশে যায়।
+  // উসমানি লিপিতে ব্যাপারটা এই শাদ্দা দিয়েই লেখা থাকে।
+  if (at.length && CONS[s[at[0]]] && readMarks(s, at[0] + 1).shadda) {
+    out.lead = CONS[s[at[0]]];
+  }
   if (s[0] !== WASLA || at.length < 2 || s[at[1]] !== LAM) return out;
 
   // আল্লাহ — এটা "আল" + নাম নয়, গোটাটাই একটা নাম; পুরোটাই আগের শব্দে মিশে যায়
@@ -297,6 +303,16 @@ export function toBanglaUccharon(arabic, surah, ayah) {
 
     const t = render(a.s, 0, { stop });
     if (!t) return;
+
+    // ইদগাম: আগের শব্দ "ন" দিয়ে শেষ (নূন সাকিন বা তানভীন) আর এই শব্দ শুরু
+    // হচ্ছে শাদ্দাওয়ালা হরফ দিয়ে — তখন "ন" ওই হরফে বদলে যায়।
+    // ইয়াকুন + ল্লাহূ = ইয়াকুল লাহূ, মিন + র্রাব্বি = মির রাব্বি
+    if (a.lead && cur && cur.endsWith('ন')) {
+      chunks.push(cur.slice(0, -1) + a.lead);
+      cur = t;
+      return;
+    }
+
     flush();
     cur = t;
   });

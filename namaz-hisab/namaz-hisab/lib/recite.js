@@ -47,5 +47,10 @@ export function qariName(id) {
 }
 
 export function ayahAudioUrl(surah, ayah, qari = DEFAULT_QARI) {
-  return `https://cdn.islamic.network/quran/audio/128/${qari}/${globalAyah(surah, ayah)}.mp3`;
+  return audioUrlByNumber(globalAyah(surah, ayah), qari);
+}
+
+// দোয়ার আয়াতগুলো বিশ্বজোড়া নম্বরে জমা থাকে, তাই সরাসরি নম্বর দিয়েও লাগে
+export function audioUrlByNumber(n, qari = DEFAULT_QARI) {
+  return `https://cdn.islamic.network/quran/audio/128/${qari}/${n}.mp3`;
 }

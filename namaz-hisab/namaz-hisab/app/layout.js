@@ -1,6 +1,7 @@
 import './globals.css';
 import AuthProvider from '../components/AuthProvider';
 import AppShell from '../components/AppShell';
+import ServiceWorker from '../components/ServiceWorker';
 
 export const metadata = {
   title: 'DeenTogether — একসাথে দ্বীনের পথে',
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <ServiceWorker />
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
