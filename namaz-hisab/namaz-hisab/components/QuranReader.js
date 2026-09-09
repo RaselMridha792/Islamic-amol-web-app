@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
 import { ChevronIcon, CheckIcon } from './Icons';
 import { SURAHS } from '../lib/quranMeta';
+import { toBanglaUccharon } from '../lib/uccharon';
 import { bnNum } from '../lib/store';
 import { getQuran, markQuran } from '../lib/cloud';
 
@@ -165,7 +166,7 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
                   </button>
                 </div>
                 <p className="ayah-ar">{v.text}</p>
-                <p className="ayah-tr">{v.transliteration}</p>
+                <p className="ayah-tr">{toBanglaUccharon(v.text, id, v.id)}</p>
                 <p className="ayah-bn">{v.translation}</p>
               </div>
             );

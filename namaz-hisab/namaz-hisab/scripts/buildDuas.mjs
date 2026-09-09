@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { toBanglaUccharon } from '../lib/uccharon.js';
 
 const ROOT = process.cwd();
 const chapters = {};
@@ -24,7 +25,7 @@ function fromQuran(surah, from, to = from) {
   if (vs.length !== to - from + 1) throw new Error(`missing ayah ${surah}:${from}-${to}`);
   return {
     ar: vs.map((v) => v.text).join(' '),
-    tr: vs.map((v) => v.transliteration).join(' '),
+    tr: vs.map((v) => toBanglaUccharon(v.text, surah, v.id)).join(' '),
     bn: vs.map((v) => v.translation).join(' '),
     ref: `সুরা ${c.transliteration} ${from}${to !== from ? '-' + to : ''}`,
   };
@@ -122,7 +123,7 @@ const list = [
     const q = fromQuran(s, from, to);
     return { id, title, when, kind: 'quran', ...q };
   }),
-  ...HADITH.map((d) => ({ ...d, kind: 'hadith' })),
+  ...HADITH.map((d) => ({ ...d, tr: toBanglaUccharon(d.ar), kind: 'hadith' })),
 ];
 
 const out = `// এই ফাইলটা scripts/buildDuas.mjs দিয়ে বানানো — হাতে বদলাবেন না।

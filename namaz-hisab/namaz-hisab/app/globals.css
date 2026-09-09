@@ -1664,12 +1664,12 @@ button {
   color: var(--text);
 }
 
+/* বাংলা উচ্চারণ — ইটালিক নয়, বাংলা হরফ হেলে গেলে পড়তে কষ্ট হয় */
 .ayah-tr {
   margin: 0 0 8px;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--gold);
-  font-style: italic;
-  line-height: 1.7;
+  line-height: 1.85;
 }
 
 .ayah-bn {
