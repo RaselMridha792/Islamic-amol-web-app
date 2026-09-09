@@ -10,7 +10,36 @@ export const dynamic = 'force-dynamic';
 // তাই পাতা রিফ্রেশ করে নতুন সহজ প্রশ্ন আনা যায় না
 async function todaysIds(sql, userId, day) {
   const have = await sql`select qids from nh_quiz where user_id = ${userId} and day = ${day} limit 1`;
-  if (have[0]) return have[0].qids;
+
+  if (have[0]) {
+    const ids = (have[0].qids || []).map(Number);
+    // প্রশ্নভাণ্ডার নতুন করে বসানো হলে আগের আইডিগুলো আর থাকে না, তখন পাতা
+    // ফাঁকা দেখাত। যেগুলো এখনো আছে সেগুলো রেখে বাকিটা নতুন করে ভরে দিই।
+    const alive = await sql.query(
+      'select id from nh_questions where id = any($1::bigint[])',
+      [ids]
+    );
+    const keep = new Set(alive.map((r) => Number(r.id)));
+    const good = ids.filter((x) => keep.has(x));
+    if (good.length === ids.length) return ids;
+
+    const need = Math.max(DAILY_QUIZ_COUNT - good.length, 0);
+    let refill = [];
+    if (need > 0) {
+      const picked = await sql.query(
+        `select id from nh_questions where not (id = any($1::bigint[]))
+         order by random() limit $2`,
+        [good, need]
+      );
+      refill = picked.map((r) => Number(r.id));
+    }
+    const next = good.concat(refill);
+    await sql`
+      update nh_quiz set qids = ${JSON.stringify(next)}::jsonb
+      where user_id = ${userId} and day = ${day}
+    `;
+    return next;
+  }
 
   const picked = await sql`
     select id from nh_questions order by random() limit ${DAILY_QUIZ_COUNT}
@@ -22,7 +51,7 @@ async function todaysIds(sql, userId, day) {
     on conflict (user_id, day) do nothing
   `;
   const again = await sql`select qids from nh_quiz where user_id = ${userId} and day = ${day} limit 1`;
-  return again[0] ? again[0].qids : ids;
+  return again[0] ? again[0].qids.map(Number) : ids;
 }
 
 export async function GET(req) {
