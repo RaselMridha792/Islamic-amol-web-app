@@ -312,24 +312,23 @@ export default function QuranReader() {
       if (!open || !ayahs.length) return;
       setBusy(true);
       setMsg('');
-      // আগে পর্দায় দেখাই, তারপর সার্ভারে পাঠাই — টিক দিতে অপেক্ষা করতে হয় না
-      setReadAyahs((prev) => {
-        const set = new Set(prev);
-        ayahs.forEach((a) => (read ? set.add(a) : set.delete(a)));
-        return Array.from(set);
-      });
+
+      // আগে পর্দায় দেখাই যাতে টিক দিতে অপেক্ষা করতে না হয়, কিন্তু আগের
+      // অবস্থাটা ধরে রাখি — সার্ভারে না পৌঁছালে ঠিক ওখানেই ফিরিয়ে দেব,
+      // নইলে পর্দায় এক আর সার্ভারে আরেক হয়ে যাবে
+      const before = readAyahs;
+      const set = new Set(before);
+      ayahs.forEach((a) => (read ? set.add(a) : set.delete(a)));
+      const after = Array.from(set);
+      setReadAyahs(after);
+
       try {
         const res = await markQuran(open, ayahs, read);
         setSummary(res.summary || EMPTY_SUMMARY);
-        setReadBySurah((m) => {
-          const next = { ...m };
-          const cur = new Set(readAyahs);
-          ayahs.forEach((a) => (read ? cur.add(a) : cur.delete(a)));
-          next[open] = cur.size;
-          return next;
-        });
+        setReadBySurah((m) => ({ ...m, [open]: after.length }));
       } catch (err) {
-        setMsg('হিসাবটা সার্ভারে রাখা গেল না, আবার চেষ্টা করুন');
+        setReadAyahs(before);
+        setMsg('হিসাবটা সার্ভারে রাখা গেল না — টিকটা ফিরিয়ে নেওয়া হলো, আবার চেষ্টা করুন');
       }
       setBusy(false);
     },
