@@ -111,6 +111,8 @@ export const markQuran = (surah, ayahs, read = true) =>
 export const getQuiz = () => call('/api/quiz');
 export const answerQuiz = (qid, chosen) =>
   call('/api/quiz', { method: 'POST', body: JSON.stringify({ qid, chosen }) });
+export const moreQuiz = () =>
+  call('/api/quiz', { method: 'POST', body: JSON.stringify({ more: true }) });
 
 /* ---------- দোয়া ও আমলের টিক ---------- */
 

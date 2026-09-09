@@ -5,12 +5,13 @@ import PageHead from './PageHead';
 import { CheckIcon, CrossIcon, StarIcon } from './Icons';
 import { POINTS } from '../lib/points';
 import { bnNum } from '../lib/store';
-import { answerQuiz, getQuiz } from '../lib/cloud';
+import { answerQuiz, getQuiz, moreQuiz } from '../lib/cloud';
 
 export default function QuizBoard() {
   const [state, setState] = useState({ loading: true, questions: [], error: '' });
   const [at, setAt] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     getQuiz()
@@ -29,6 +30,23 @@ export default function QuizBoard() {
   const done = useMemo(() => qs.filter((q) => q.chosen !== null).length, [qs]);
   const right = useMemo(() => qs.filter((q) => q.correct).length, [qs]);
   const allDone = qs.length > 0 && done === qs.length;
+
+  // আজকের ১০টা শেষ হলেও কেউ চাইলে আরও নিতে পারে
+  async function askMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    setState((s) => ({ ...s, error: '' }));
+    try {
+      await moreQuiz();
+      const d = await getQuiz();
+      setState({ loading: false, questions: d.questions || [], error: '' });
+      const first = (d.questions || []).findIndex((q) => q.chosen === null);
+      if (first !== -1) setAt(first);
+    } catch (err) {
+      setState((s) => ({ ...s, error: err.message || 'আরও প্রশ্ন আনা গেল না' }));
+    }
+    setLoadingMore(false);
+  }
 
   async function choose(index) {
     const q = qs[at];
@@ -99,6 +117,15 @@ export default function QuizBoard() {
             {bnNum(right)}/{bnNum(qs.length)} সঠিক · {bnNum(right * POINTS.quiz)} পয়েন্ট জমা হলো
           </span>
           <small>আগামীকাল নতুন ১০টি প্রশ্ন আসবে।</small>
+          <button
+            type="button"
+            className="btn primary wide"
+            style={{ marginTop: 14 }}
+            disabled={loadingMore}
+            onClick={askMore}
+          >
+            {loadingMore ? 'আনা হচ্ছে…' : 'আরও কুইজ দিন'}
+          </button>
         </div>
       ) : null}
 

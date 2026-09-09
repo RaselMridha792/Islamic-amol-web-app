@@ -2,7 +2,7 @@
 
 import Avatar from './Avatar';
 import { MosqueIcon } from './Icons';
-import { STATUS_MAP, STATUSES } from '../lib/prayers';
+import { STATUS_MAP, STATUSES, totalRakat } from '../lib/prayers';
 import { bnNum } from '../lib/store';
 
 // আমার দিক — এখানেই ট্যাপ করে হিসাব লেখা হয়
@@ -58,14 +58,23 @@ export default function PrayerCard({ prayer, me, partner, mine, theirs, onPick }
         <div className="waqt-badge">
           <MosqueIcon />
         </div>
-        <div>
+        <div className="card-title">
           <div className="name">{prayer.bn}</div>
           <div className="sub">
-            {prayer.waqt} · {prayer.rakat}
+            {prayer.waqt} · মোট {bnNum(totalRakat(prayer))} রাকাত
           </div>
         </div>
         <div className="arabic">{prayer.ar}</div>
       </header>
+
+      {/* ওয়াক্তের পুরো রাকাত — শুধু ফরজ নয়, সুন্নত-নফল-বিতরসহ */}
+      <div className="rakat-row">
+        {prayer.parts.map((part, i) => (
+          <span key={i} className={'rakat-chip ' + part.tone}>
+            {bnNum(part.n)} {part.kind}
+          </span>
+        ))}
+      </div>
 
       <div className={'split' + (partner ? '' : ' solo')}>
         <MySide

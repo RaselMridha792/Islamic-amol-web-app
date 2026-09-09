@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { fail, readBody, requireUser, todayKey } from '../../../lib/api';
-import { DAILY_QUIZ_COUNT, POINTS } from '../../../lib/points';
+import { DAILY_QUIZ_COUNT, MORE_COUNT, MAX_PER_DAY, POINTS } from '../../../lib/points';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -79,10 +79,38 @@ export async function POST(req) {
   const body = await readBody(req);
   if (!body) return fail('অনুরোধটা পড়া গেল না');
 
+  const day = todayKey();
+
+  // "আরো কুইজ" — আজকের তালিকায় আরও কিছু প্রশ্ন জুড়ে দিই।
+  // যেগুলো আগেই এসেছে সেগুলো বাদ, তাই একই প্রশ্ন দুবার আসে না।
+  if (body.more) {
+    try {
+      const sql = db();
+      const have = (await todaysIds(sql, gate.user.id, day)).map(Number);
+      if (have.length >= MAX_PER_DAY) {
+        return fail('আজকের মতো যথেষ্ট হয়েছে, কাল আবার নতুন প্রশ্ন আসবে');
+      }
+      const picked = await sql.query(
+        `select id from nh_questions where not (id = any($1::bigint[]))
+         order by random() limit $2`,
+        [have, MORE_COUNT]
+      );
+      const add = picked.map((r) => Number(r.id));
+      if (!add.length) return fail('আর কোনো নতুন প্রশ্ন নেই');
+      const next = have.concat(add);
+      await sql`
+        update nh_quiz set qids = ${JSON.stringify(next)}::jsonb
+        where user_id = ${gate.user.id} and day = ${day}
+      `;
+      return NextResponse.json({ added: add.length, total: next.length });
+    } catch (err) {
+      return fail('আরও প্রশ্ন আনা গেল না', 503);
+    }
+  }
+
   const qid = Number(body.qid);
   const chosen = Number(body.chosen);
   if (!Number.isFinite(qid) || !Number.isFinite(chosen)) return fail('উত্তরটা ঠিক নেই');
-  const day = todayKey();
 
   try {
     const sql = db();

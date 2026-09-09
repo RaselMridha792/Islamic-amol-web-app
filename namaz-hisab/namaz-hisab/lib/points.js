@@ -6,3 +6,7 @@ export const POINTS = {
 };
 
 export const DAILY_QUIZ_COUNT = 10;
+// "আরো কুইজ" এ চাপ দিলে একবারে যতগুলো যোগ হয়
+export const MORE_COUNT = 10;
+// একদিনে এর বেশি নয় — নইলে পয়েন্টের হিসাব অর্থহীন হয়ে যায়
+export const MAX_PER_DAY = 100;

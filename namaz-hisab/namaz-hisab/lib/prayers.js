@@ -1,10 +1,54 @@
+// রাকাতের হিসাব হানাফি মাযহাব অনুযায়ী, বাংলাদেশে যেভাবে প্রচলিত।
+// tone: ফরজ ও ওয়াজিব আলাদা করে দেখানোর জন্য।
 export const PRAYERS = [
-  { id: 'fajr', bn: 'ফজর', ar: 'الفجر', waqt: 'ভোর', rakat: '২ রাকাত ফরজ' },
-  { id: 'zuhr', bn: 'যোহর', ar: 'الظهر', waqt: 'দুপুর', rakat: '৪ রাকাত ফরজ' },
-  { id: 'asr', bn: 'আসর', ar: 'العصر', waqt: 'বিকাল', rakat: '৪ রাকাত ফরজ' },
-  { id: 'maghrib', bn: 'মাগরিব', ar: 'المغرب', waqt: 'সন্ধ্যা', rakat: '৩ রাকাত ফরজ' },
-  { id: 'isha', bn: 'এশা', ar: 'العشاء', waqt: 'রাত', rakat: '৪ রাকাত ফরজ' },
+  {
+    id: 'fajr', bn: 'ফজর', ar: 'الفجر', waqt: 'ভোর', rakat: '২ রাকাত ফরজ',
+    parts: [
+      { n: 2, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 2, kind: 'ফরজ', tone: 'farz' },
+    ],
+  },
+  {
+    id: 'zuhr', bn: 'যোহর', ar: 'الظهر', waqt: 'দুপুর', rakat: '৪ রাকাত ফরজ',
+    parts: [
+      { n: 4, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 4, kind: 'ফরজ', tone: 'farz' },
+      { n: 2, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 2, kind: 'নফল', tone: 'nafl' },
+    ],
+  },
+  {
+    id: 'asr', bn: 'আসর', ar: 'العصر', waqt: 'বিকাল', rakat: '৪ রাকাত ফরজ',
+    parts: [
+      { n: 4, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 4, kind: 'ফরজ', tone: 'farz' },
+    ],
+  },
+  {
+    id: 'maghrib', bn: 'মাগরিব', ar: 'المغرب', waqt: 'সন্ধ্যা', rakat: '৩ রাকাত ফরজ',
+    parts: [
+      { n: 3, kind: 'ফরজ', tone: 'farz' },
+      { n: 2, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 2, kind: 'নফল', tone: 'nafl' },
+    ],
+  },
+  {
+    id: 'isha', bn: 'এশা', ar: 'العشاء', waqt: 'রাত', rakat: '৪ রাকাত ফরজ',
+    parts: [
+      { n: 4, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 4, kind: 'ফরজ', tone: 'farz' },
+      { n: 2, kind: 'সুন্নত', tone: 'sunnah' },
+      { n: 2, kind: 'নফল', tone: 'nafl' },
+      { n: 3, kind: 'বিতর', tone: 'witr' },
+      { n: 2, kind: 'নফল', tone: 'nafl' },
+    ],
+  },
 ];
+
+// এক ওয়াক্তে সব মিলিয়ে কয় রাকাত
+export function totalRakat(prayer) {
+  return prayer.parts.reduce((s, p) => s + p.n, 0);
+}
 
 export const STATUSES = [
   { id: 'prayed', bn: 'পড়েছে', short: 'পড়েছে', fine: 0, tone: 'good' },

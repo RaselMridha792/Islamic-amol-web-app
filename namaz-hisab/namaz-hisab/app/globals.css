@@ -2123,3 +2123,41 @@ button {
 .pass-eye[aria-pressed='true'] {
   color: var(--pink-soft);
 }
+
+/* ---------- ওয়াক্তের রাকাত ---------- */
+
+.card-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.rakat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 14px 12px;
+}
+
+.rakat-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ফরজটাই আসল, তাই সেটাই চোখে পড়ে */
+.rakat-chip.farz {
+  border-color: var(--line-strong);
+  background: rgba(255, 61, 130, 0.14);
+  color: var(--pink-soft);
+  font-weight: 600;
+}
+
+.rakat-chip.witr {
+  border-color: rgba(231, 194, 125, 0.4);
+  background: rgba(231, 194, 125, 0.1);
+  color: var(--gold);
+}
