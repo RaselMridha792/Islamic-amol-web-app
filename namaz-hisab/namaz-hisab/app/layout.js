@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'নামাজ হিসাব',
-  description: 'পাঁচ ওয়াক্ত নামাজের হিসাব আর জরিমানার খাতা',
+  title: 'DeenTogether — একসাথে দ্বীনের পথে',
+  description: 'একসাথে পাঁচ ওয়াক্ত নামাজের হিসাব রাখার খাতা',
   manifest: '/manifest.json',
 };
 

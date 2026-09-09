@@ -433,9 +433,9 @@ export default function PrayerApp() {
             <div className="crescent">
               <CrescentIcon />
             </div>
-            <div>
-              <h1>নামাজ হিসাব</h1>
-              <p>পাঁচ ওয়াক্তের খাতা</p>
+            <div className="brand-name">
+              <h1>একসাথে দ্বীনের পথে</h1>
+              <p>DeenTogether</p>
             </div>
           </div>
           <div className="icon-row">

@@ -1,7 +1,7 @@
 {
-  "name": "নামাজ হিসাব",
-  "short_name": "নামাজ হিসাব",
-  "description": "পাঁচ ওয়াক্ত নামাজের হিসাব আর জরিমানার খাতা",
+  "name": "DeenTogether — একসাথে দ্বীনের পথে",
+  "short_name": "DeenTogether",
+  "description": "একসাথে পাঁচ ওয়াক্ত নামাজের হিসাব রাখার খাতা",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#10050D",
