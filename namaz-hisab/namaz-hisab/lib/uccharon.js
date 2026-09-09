@@ -1,23 +1,25 @@
 // আরবি লেখা থেকে বাংলা হরফে উচ্চারণ।
 //
-// এটা পড়ার সহায়তা মাত্র — তাজবীদের সব নিয়ম (ইদগাম, ইখফা, মাদের মাত্রা,
-// গুন্নাহ) এতে ধরা পড়ে না, আর প্রতিটি শব্দ আলাদা করে লেখা হয় বলে ছাপা
-// বইয়ের টানা উচ্চারণের সাথে হুবহু মেলে না। সহীহ তিলাওয়াত কারী বা উস্তাদের
-// কাছেই শিখতে হবে। আসল আরবিটা উপরেই আছে, উচ্চারণ তার নিচে সহায়ক হিসেবে।
+// ছাপা বইয়ের মতো টেনে লেখা হয় — "বিসমিল্লাহির রাহমানির রাহীম",
+// শব্দ ধরে ধরে "বিসমি আল্লাহি আর-রাহমানি আর-রাহীম" নয়। নিয়মটা হলো:
+// "আল" এর ব্যঞ্জনটা আগের শব্দের লেজে জোড়া লাগে, আর নামটা নতুন শব্দ হয়ে বসে।
+//
+// তবু এটা পড়ার সহায়তা মাত্র। তাজবীদের সব নিয়ম (ইদগাম, ইখফা, মাদের মাত্রা,
+// গুন্নাহ) এতে ধরা পড়ে না। সহীহ তিলাওয়াত কারী বা উস্তাদের কাছেই শিখতে হবে।
+// আসল আরবিটা উপরেই আছে, উচ্চারণ তার নিচে সহায়ক হিসেবে।
 
 /* ---------- হরফ ---------- */
 
 const CONS = {
   'ب': 'ব', 'ت': 'ত', 'ث': 'ছ', 'ج': 'জ', 'ح': 'হ', 'خ': 'খ',
   'د': 'দ', 'ذ': 'য', 'ر': 'র', 'ز': 'য', 'س': 'স', 'ش': 'শ',
-  'ص': 'ছ', 'ض': 'দ', 'ط': 'ত', 'ظ': 'য', 'غ': 'গ', 'ف': 'ফ',
+  'ص': 'স', 'ض': 'দ', 'ط': 'ত', 'ظ': 'য', 'غ': 'গ', 'ف': 'ফ',
   'ق': 'ক', 'ك': 'ক', 'ل': 'ল', 'م': 'ম', 'ن': 'ন', 'ه': 'হ',
   'ة': 'হ',
-  // ওয়াও আর ইয়া ব্যঞ্জন হলে
   'و': 'ওয়', 'ي': 'ইয়',
 };
 
-// আলিফ, হামযা, আইন — এগুলোর নিজের ব্যঞ্জন-ধ্বনি বাংলায় নেই, স্বরই বসে
+// আলিফ, হামযা, আইন — নিজের ব্যঞ্জনধ্বনি বাংলায় নেই, স্বরই বসে
 const CARRIER = new Set(['ا', 'ٱ', 'ى', 'ء', 'أ', 'إ', 'ؤ', 'ئ', 'ع']);
 
 const FATHA = 'َ';
@@ -32,28 +34,30 @@ const DAMMATAN = 'ٌ';
 const SUP_ALIF = 'ٰ';   // ছোট আলিফ — দীর্ঘ আ
 const SMALL_WAW = 'ۥ';  // ছোট ওয়াও — দীর্ঘ ঊ
 const SMALL_YA = 'ۦ';   // ছোট ইয়া — দীর্ঘ ঈ
-// এই লিপিতে তানভীনের খাড়া রূপগুলো
-const TAN_A = 'ٗ';      // = ً
-const TAN_I = 'ٖ';      // = ٍ
-const TAN_U = 'ٞ';      // = ٌ
+// এই লিপিতে তানভীনের খাড়া রূপ — ডেটাসেটের ল্যাটিন উচ্চারণের সাথে মিলিয়ে যাচাই করা
+const TAN_A = 'ٗ';
+const TAN_I = 'ٖ';
+const TAN_U = 'ٞ';
+const IQLAB = 'ۢ';
+const IQLAB2 = 'ۭ';
 
 const ALIF = 'ا';
 const WASLA = 'ٱ';
 const WAW = 'و';
 const YA = 'ي';
 const LAM = 'ل';
+const HA = 'ه';
 const MAKSURA = 'ى';
 
 // ওয়াকফ, রুকু, সিজদার চিহ্ন — পড়ার সময় ধরা হয় না
 const SKIP = new Set([
   'ـ', 'ۖ', 'ۗ', 'ۘ', 'ۙ', 'ۚ', 'ۛ', 'ۜ', '۝', '۞', '۟', '۠',
-  'ۣ', 'ۤ', 'ۧ', 'ۨ', '۩', '۪', '۫', '۬', 'ٓ', 'ٔ',
-  'ٕ', 'ٜ', ' ',
+  'ۣ', 'ۤ', 'ۧ', 'ۨ', '۩', '۪', '۫', '۬', 'ٓ', 'ٔ', 'ٕ', 'ٜ', ' ',
 ]);
 
 const HARAKAT = new Set([
   FATHA, KASRA, DAMMA, SUKUN, SUKUN_U, FATHATAN, KASRATAN, DAMMATAN,
-  TAN_A, TAN_I, TAN_U, 'ۢ', 'ۭ',
+  TAN_A, TAN_I, TAN_U, IQLAB, IQLAB2,
 ]);
 
 const SIGN = { a: 'া', i: 'ি', u: 'ু', ii: 'ী', uu: 'ূ' };
@@ -62,10 +66,9 @@ const HASANT = '্';
 
 const isLetter = (c) => CONS[c] !== undefined || CARRIER.has(c);
 
-
 /* ---------- হুরুফে মুকাত্তাআত ---------- */
-// কিছু সুরার শুরুর বিচ্ছিন্ন হরফগুলো (আলিফ লাম মীম, ইয়া-সীন) ধ্বনি ধরে নয়,
-// হরফের নাম ধরে পড়া হয়। তাই এই আয়াতগুলোতে সাধারণ নিয়ম খাটে না।
+// কিছু সুরার শুরুর বিচ্ছিন্ন হরফ (আলিফ লাম মীম, ইয়া-সীন) ধ্বনি ধরে নয়,
+// হরফের নাম ধরে পড়া হয়
 
 const LETTER_NAMES = {
   'ا': 'আলিফ', 'ل': 'লাম', 'م': 'মীম', 'ص': 'সদ', 'ر': 'রা',
@@ -80,7 +83,7 @@ const MUQATTAAT = new Set([
   '46:1', '50:1', '68:1',
 ]);
 
-/* ---------- একটি হরফের চিহ্নগুলো পড়ি ---------- */
+/* ---------- একটি হরফের চিহ্নগুলো ---------- */
 
 function readMarks(s, from) {
   const m = { shadda: false, vowel: null, tanween: null, sukun: false, long: null, at: from };
@@ -95,11 +98,10 @@ function readMarks(s, from) {
     else if (c === FATHATAN) m.tanween = 'a';
     else if (c === KASRATAN) m.tanween = 'i';
     else if (c === DAMMATAN) m.tanween = 'u';
-    else if ((c === 'ۢ' || c === 'ۭ') && m.vowel && !m.tanween) {
+    else if ((c === IQLAB || c === IQLAB2) && m.vowel && !m.tanween) {
       m.tanween = m.vowel;
       m.vowel = null;
-    }
-    else if (c === TAN_A) m.tanween = 'a';
+    } else if (c === TAN_A) m.tanween = 'a';
     else if (c === TAN_I) m.tanween = 'i';
     else if (c === TAN_U) m.tanween = 'u';
     else if (c === SUP_ALIF) m.long = 'a';
@@ -112,15 +114,14 @@ function readMarks(s, from) {
   return m;
 }
 
-/* ---------- একটি শব্দ ---------- */
+/* ---------- হরফের সারি বাংলায় ---------- */
 
-function word(src, opts) {
-  const s = Array.from(src).filter((c) => !SKIP.has(c));
-  const isLast = opts && opts.last;
+function render(s, from, opts) {
+  const stop = opts.stop; // আয়াতের শেষ শব্দ — থামা হয়, তাই শেষ স্বর পড়া হয় না
+  const skipShaddaAt = opts.skipShaddaAt === undefined ? -1 : opts.skipShaddaAt;
   let out = '';
-  let started = false;
-  let i = 0;
-  let skipShaddaAt = -1; // "আল" মিশে গেলে পরের হরফের শাদ্দা একবারই ধরব
+  let started = Boolean(opts.started);
+  let i = from;
 
   while (i < s.length) {
     const ch = s[i];
@@ -129,31 +130,10 @@ function word(src, opts) {
       continue;
     }
 
-    // ---- "আল" (নির্দিষ্টতাবাচক) ----
-    // শব্দের মাঝেও আসতে পারে: ওয়াল্‌, ফাল্‌, বিল্‌ — তাই এখানেই দেখি
-    if ((ch === WASLA || ch === ALIF) && s[i + 1] === LAM && !readMarks(s, i + 2).shadda) {
-      let k = i + 2;
-      while (k < s.length && !isLetter(s[k])) k += 1;
-      const nx = k < s.length ? readMarks(s, k + 1) : null;
-      if (nx && nx.shadda && CONS[s[k]]) {
-        // সূর্য হরফ — লাম মিশে যায়। হরফটা লাম হলে আল্লাহ, নইলে আর-রাহমান।
-        out += (started ? '' : 'আ') + (s[k] === LAM ? 'ল্' : CONS[s[k]] + '-');
-        if (started && s[k] !== LAM) out = out.slice(0, -1 - CONS[s[k]].length) + CONS[s[k]] + '-';
-        skipShaddaAt = k;
-        i = k;
-      } else {
-        // চন্দ্র হরফ — আল থেকেই যায়
-        out += (started ? 'ল' : 'আল');
-        i = i + 2;
-      }
-      started = true;
-      continue;
-    }
-
     const m = readMarks(s, i + 1);
     let j = m.at;
     let long = m.long;
-    const shadda = m.shadda && i !== skipShaddaAt && !(i === 0 && !started);
+    const shadda = m.shadda && i !== skipShaddaAt && !(i === from && !opts.started);
 
     // পরের হরফ দেখে দীর্ঘ স্বর: َا = আ, ِي = ঈ, ُو = ঊ
     if (!long && !m.sukun) {
@@ -167,31 +147,29 @@ function word(src, opts) {
       }
     }
 
-    // আয়াতের শেষ শব্দে থামা হয়, তাই শেষের স্বর/তানভীন পড়া হয় না
-    const atEnd = isLast && j >= s.length;
+    const atEnd = stop && j >= s.length;
     let vowel = m.vowel;
     let tanween = m.tanween;
-    if (atEnd && !long) {
-      vowel = null;
+    if (atEnd) {
       tanween = null;
-    } else if (atEnd && tanween) {
-      tanween = null;
+      if (!long) vowel = null;
     }
 
     if (CARRIER.has(ch)) {
-      // আলিফ আগের স্বরকে টানে — নতুন কিছু যোগ করে না
+      // আলিফ আগের স্বরকে টানে, নতুন কিছু যোগ করে না
       if ((ch === ALIF || ch === WASLA || ch === MAKSURA) && started && !m.vowel && !long) {
         i = j;
         continue;
       }
+      // সুকুনযুক্ত আইন — বাংলায় ঊর্ধ্বকমা দিয়ে লেখা হয়: আ’তাইনাকা
       if (ch === 'ع' && m.sukun) {
         out += started ? '’' : 'আ';
         started = true;
         i = j;
         continue;
       }
-      const key = long || vowel || tanween || 'a';
-      out += LEAD[key] || LEAD.a;
+      const helper = ch === WASLA && !started && !m.vowel && !long ? 'i' : 'a';
+      out += LEAD[long || vowel || tanween || helper] || LEAD.a;
       started = true;
       if (tanween) out += 'ন';
       i = j;
@@ -199,13 +177,10 @@ function word(src, opts) {
     }
 
     let letter = CONS[ch];
-    // তা মারবুতা — থামলে "হ", টেনে পড়লে "ত"
-    if (ch === 'ة') letter = isLast ? 'হ' : 'ত';
+    if (ch === 'ة') letter = stop ? 'হ' : 'ত'; // তা মারবুতা: থামলে হ, টানলে ত
     if (m.sukun && (ch === WAW || ch === YA)) {
-      // সুকুন পড়লে ওয়াও/ইয়া টানা স্বর হয়ে যায় — ইয়াওমি, আলাইহিম
-      letter = ch === WAW ? 'ও' : 'ই';
+      letter = ch === WAW ? 'ও' : 'ই'; // ইয়াওমি, আলাইহিম
     } else if (shadda) {
-      // দ্বিত্ব: ইয়্যাকা, কুওওয়াত
       letter = ch === WAW ? 'ওওয়' : ch === YA ? 'ইয়্য' : letter + HASANT + letter;
     }
 
@@ -215,20 +190,53 @@ function word(src, opts) {
     if (long) out += SIGN[long];
     else if (vowel) out += SIGN[vowel];
     else if (tanween) out += SIGN[tanween] + 'ন';
-    // সুকুন হলে কিছুই বসে না — বাংলায় বদ্ধ অক্ষরে স্বর এমনিতেই পড়ে না
+    // সুকুনে কিছু বসে না — বাংলায় বদ্ধ অক্ষরে স্বর এমনিতেই পড়ে না
 
     i = j;
   }
 
-  // হামযার ই আর পরের ইয়া পাশাপাশি এলে একটাই থাকে — ইয়্যাকা, ইয়্যাহু
-  return out.replace(/^ইই/, 'ই');
+  return out;
+}
+
+/* ---------- শব্দটা আগেরটার সাথে কীভাবে জুড়বে ---------- */
+
+function analyze(src) {
+  const s = Array.from(src).filter((c) => !SKIP.has(c));
+  const at = [];
+  s.forEach((c, k) => { if (isLetter(c)) at.push(k); });
+
+  const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1 };
+  if (s[0] !== WASLA || at.length < 2 || s[at[1]] !== LAM) return out;
+
+  // আল্লাহ — এটা "আল" + নাম নয়, গোটাটাই একটা নাম; পুরোটাই আগের শব্দে মিশে যায়
+  if (at.length >= 4 && s[at[2]] === LAM && s[at[3]] === HA) {
+    out.allah = true;
+    out.from = at[2];
+    return out;
+  }
+
+  // লামটা নিজেই শাদ্দা বইলে সেটা "আল" নয় (আল্লাযী)
+  if (readMarks(s, at[1] + 1).shadda) return out;
+  if (at[2] === undefined) return out;
+
+  const k = at[2];
+  if (readMarks(s, k + 1).shadda && CONS[s[k]]) {
+    out.article = CONS[s[k]]; // সূর্য হরফ — লাম মিশে যায়
+    out.from = k;
+    out.skipShaddaAt = k;
+  } else {
+    out.article = 'ল'; // চন্দ্র হরফ
+    out.from = at[1] + 1;
+  }
+  return out;
 }
 
 /* ---------- পুরো আয়াত ---------- */
 
 export function toBanglaUccharon(arabic, surah, ayah) {
   if (!arabic) return '';
-  // বিচ্ছিন্ন হরফ থাকে শুধু আয়াতের প্রথম শব্দে; বাকিটা স্বাভাবিক নিয়মেই পড়া হয়
+
+  // বিচ্ছিন্ন হরফ থাকে শুধু আয়াতের প্রথম শব্দে; বাকিটা স্বাভাবিক নিয়মেই
   if (surah && MUQATTAAT.has(surah + ':' + ayah)) {
     const parts = String(arabic).split(/\s+/).filter(Boolean);
     const names = Array.from(parts[0] || '')
@@ -238,13 +246,63 @@ export function toBanglaUccharon(arabic, surah, ayah) {
     const rest = parts.slice(1).join(' ');
     return rest ? names + ' — ' + toBanglaUccharon(rest) : names;
   }
+
   const words = String(arabic).split(/\s+/).filter(Boolean);
-  const out = [];
+  const chunks = [];
+  let cur = '';
+
+  const flush = () => {
+    if (cur) chunks.push(cur);
+    cur = '';
+  };
+
   words.forEach((w, idx) => {
-    const t = word(w, { last: idx === words.length - 1 });
-    if (t) out.push(t);
+    const first = idx === 0;
+    const stop = idx === words.length - 1;
+    const a = analyze(w);
+
+    // আল্লাহ — আগের শব্দের সাথে মিশে যায়: বিসমি + ল্লাহি = বিসমিল্লাহি
+    if (a.allah) {
+      const body = render(a.s, a.from, { stop, started: true });
+      if (first || !cur) {
+        flush();
+        cur = 'আ' + body;
+      } else {
+        cur += body;
+      }
+      return;
+    }
+
+    // "আল" — ব্যঞ্জনটা আগের শব্দের লেজে, নামটা নতুন শব্দ:
+    // রাব্বি + ল = রাব্বিল, তারপর আলামীন
+    if (a.article) {
+      const body = render(a.s, a.from, { stop, skipShaddaAt: a.skipShaddaAt });
+      if (first || !cur) {
+        // আয়াতের শুরুতে: চন্দ্র হরফে "আল" নামের সাথেই থাকে (আলহামদু),
+        // সূর্য হরফে আলাদা শব্দ হয় (আর রাহমান)
+        flush();
+        if (a.skipShaddaAt >= 0) {
+          chunks.push('আ' + a.article);
+          cur = body;
+        } else {
+          cur = 'আল' + body;
+        }
+      } else {
+        cur += a.article;
+        flush();
+        cur = body;
+      }
+      return;
+    }
+
+    const t = render(a.s, 0, { stop });
+    if (!t) return;
+    flush();
+    cur = t;
   });
-  return out.join(' ');
+
+  flush();
+  return chunks.join(' ').replace(/ইই/g, 'ই');
 }
 
 export default toBanglaUccharon;

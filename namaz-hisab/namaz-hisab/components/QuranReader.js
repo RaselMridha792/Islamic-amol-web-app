@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
-import { ChevronIcon, CheckIcon } from './Icons';
+import { ChevronIcon, CheckIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { SURAHS } from '../lib/quranMeta';
 import { toBanglaUccharon } from '../lib/uccharon';
+import { ayahAudioUrl } from '../lib/recite';
 import { bnNum } from '../lib/store';
 import { getQuran, markQuran } from '../lib/cloud';
 
@@ -95,7 +96,53 @@ function SurahList({ onOpen, readBySurah }) {
 function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [playing, setPlaying] = useState(null);   // কোন আয়াত বাজছে
+  const [loading, setLoading] = useState(null);
+  const [audioMsg, setAudioMsg] = useState('');
+  const audioRef = useRef(null);
   const meta = SURAHS[id - 1];
+
+  // সুরা বদলালে বাজনা থামিয়ে দিই
+  useEffect(() => {
+    const a = audioRef.current;
+    return () => {
+      if (a) {
+        a.pause();
+        a.removeAttribute('src');
+      }
+    };
+  }, [id]);
+
+  function playAyah(ayahId) {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing === ayahId) {
+      a.pause();
+      setPlaying(null);
+      return;
+    }
+    setLoading(ayahId);
+    setAudioMsg('');
+    a.src = ayahAudioUrl(id, ayahId);
+    a.play()
+      .then(() => {
+        setPlaying(ayahId);
+        setLoading(null);
+      })
+      .catch(() => {
+        setLoading(null);
+        setPlaying(null);
+        setAudioMsg('তিলাওয়াতটা চালানো গেল না — নেট দেখে আবার চেষ্টা করুন।');
+      });
+  }
+
+  // এক আয়াত শেষ হলে পরেরটা আপনিই বাজবে
+  function handleEnded() {
+    if (!data || playing === null) return;
+    const next = playing + 1;
+    if (data.verses.some((v) => v.id === next)) playAyah(next);
+    else setPlaying(null);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -147,6 +194,9 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
       {error ? <div className="empty-note" style={{ marginTop: 14 }}>{error}</div> : null}
       {!data && !error ? <div className="empty-note" style={{ marginTop: 14 }}>খোলা হচ্ছে…</div> : null}
 
+      <audio ref={audioRef} preload="none" onEnded={handleEnded} />
+      {audioMsg ? <div className="auth-error" style={{ marginTop: 12 }}>{audioMsg}</div> : null}
+
       {data ? (
         <div className="ayah-list">
           {data.verses.map((v) => {
@@ -155,6 +205,21 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
               <div key={v.id} className={'ayah' + (on ? ' read' : '')}>
                 <div className="ayah-top">
                   <span className="ayah-no">{bnNum(v.id)}</span>
+                  <div className="ayah-acts">
+                    <button
+                      type="button"
+                      className={'ayah-play' + (playing === v.id ? ' on' : '')}
+                      aria-label={playing === v.id ? 'থামান' : 'তিলাওয়াত শুনুন'}
+                      onClick={() => playAyah(v.id)}
+                    >
+                      {loading === v.id ? (
+                        <SpinIcon />
+                      ) : playing === v.id ? (
+                        <PauseIcon />
+                      ) : (
+                        <PlayIcon />
+                      )}
+                    </button>
                   <button
                     type="button"
                     className={'ayah-tick' + (on ? ' on' : '')}
@@ -164,6 +229,7 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
                   >
                     <CheckIcon size={14} />
                   </button>
+                  </div>
                 </div>
                 <p className="ayah-ar">{v.text}</p>
                 <p className="ayah-tr">{toBanglaUccharon(v.text, id, v.id)}</p>

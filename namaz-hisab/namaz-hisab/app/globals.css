@@ -1997,3 +1997,40 @@ button {
   vertical-align: -2px;
   color: var(--gold);
 }
+
+/* ---------- আয়াতের তিলাওয়াত ---------- */
+
+.ayah-acts {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ayah-play {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--pink-soft);
+}
+
+.ayah-play.on {
+  background: var(--pink);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px var(--pink-glow);
+}
+
+.spin {
+  animation: nh-spin 0.9s linear infinite;
+}
+
+@keyframes nh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
