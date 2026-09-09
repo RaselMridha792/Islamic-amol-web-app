@@ -193,3 +193,22 @@ export function SpinIcon({ size = 15 }) {
     </svg>
   );
 }
+
+export function EyeIcon({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function EyeOffIcon({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.9 5.8A8.6 8.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.9 3.7M6.4 6.9A16 16 0 0 0 2.5 12S6 18.5 12 18.5c1.3 0 2.4-.3 3.4-.7" />
+      <path d="M10 10a2.8 2.8 0 0 0 4 4" />
+      <path d="m4 4 16 16" />
+    </svg>
+  );
+}

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from './AuthProvider';
+import PasswordField from './PasswordField';
 import {
   BookIcon,
   CrescentIcon,
@@ -122,18 +123,14 @@ function Gate() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="g-pass">পাসওয়ার্ড</label>
-            <input
-              id="g-pass"
-              type="password"
-              value={password}
-              autoComplete={isNew ? 'new-password' : 'current-password'}
-              maxLength={200}
-              placeholder={isNew ? 'অন্তত ৬ অক্ষর' : 'পাসওয়ার্ড'}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          <PasswordField
+            id="g-pass"
+            label="পাসওয়ার্ড"
+            value={password}
+            onChange={setPassword}
+            autoComplete={isNew ? 'new-password' : 'current-password'}
+            placeholder={isNew ? 'অন্তত ৬ অক্ষর' : 'পাসওয়ার্ড'}
+          />
 
           {error ? <div className="auth-error">{error}</div> : null}
 

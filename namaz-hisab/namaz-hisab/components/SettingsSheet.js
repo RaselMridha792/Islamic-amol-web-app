@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Avatar from './Avatar';
 import { useAuth } from './AuthProvider';
 import { STATUSES } from '../lib/prayers';
@@ -149,9 +150,11 @@ export default function SettingsSheet({ onClose }) {
   const [soundOn, setSoundOn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [mounted, setMounted] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
+    setMounted(true);
     setSoundOn(loadSoundOn());
     fetch('/api/profile', { credentials: 'same-origin' })
       .then((r) => r.json())
@@ -201,7 +204,11 @@ export default function SettingsSheet({ onClose }) {
     saveSoundOn(next);
   }
 
-  return (
+  // শিটটা পাতার ভেতরে থাকলে .shell এর স্ট্যাকিং কনটেক্সটে আটকে যায়, আর নিচের
+  // ট্যাববার তার উপরে উঠে আসে। তাই সরাসরি body তে বসাই।
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="sheet-bg"
       onClick={(e) => {
@@ -211,6 +218,7 @@ export default function SettingsSheet({ onClose }) {
       <div className="sheet" role="dialog" aria-modal="true" aria-label="সেটিংস">
         <h2>আপনার তথ্য</h2>
 
+        <div className="sheet-body">
         <div className="field">
           <label htmlFor="me-name">নাম</label>
           <div className="photo-row">
@@ -285,6 +293,7 @@ export default function SettingsSheet({ onClose }) {
         </button>
 
         {msg ? <div className="auth-error">{msg}</div> : null}
+        </div>
 
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={onClose}>
@@ -295,6 +304,7 @@ export default function SettingsSheet({ onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

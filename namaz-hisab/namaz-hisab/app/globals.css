@@ -996,10 +996,25 @@ button {
   border: 1px solid var(--line-strong);
   border-bottom: none;
   border-radius: 26px 26px 0 0;
-  padding: 18px 16px calc(22px + env(safe-area-inset-bottom));
+  padding: 18px 16px calc(14px + env(safe-area-inset-bottom));
+  /* মোবাইলে vh ব্রাউজারের বার সহ বড় উচ্চতা ধরে, তাই শিটের নিচটা পর্দার
+     বাইরে চলে যেত আর শেষ পর্যন্ত গড়ানো যেত না — dvh আসল দেখা-যাওয়া উচ্চতা ধরে */
   max-height: 88vh;
-  overflow-y: auto;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: sheet-up 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* শুধু মাঝের অংশটা গড়ায়, তাই সেভ-বাতিল সবসময় হাতের নাগালে থাকে */
+.sheet-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 @keyframes sheet-up {
@@ -1077,8 +1092,11 @@ button {
 
 .sheet-actions {
   display: flex;
+  flex: none;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .btn {
@@ -2075,4 +2093,33 @@ button {
 .qari-pick option {
   background: var(--bg-soft);
   color: var(--text);
+}
+
+/* ---------- পাসওয়ার্ড দেখা-লুকানো ---------- */
+
+.pass-wrap {
+  position: relative;
+}
+
+.field .pass-wrap input {
+  padding-right: 46px;
+}
+
+.pass-eye {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.pass-eye[aria-pressed='true'] {
+  color: var(--pink-soft);
 }
