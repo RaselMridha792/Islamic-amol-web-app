@@ -1,0 +1,15 @@
+# নির্ভরতা ও বিল্ড
+node_modules/
+.next/
+out/
+build/
+
+# গোপন তথ্য — ডেটাবেসের সংযোগ কখনো রিপোতে যাবে না
+.env
+.env.*
+!.env*.example
+
+# আবর্জনা
+*.log
+.DS_Store
+Thumbs.db

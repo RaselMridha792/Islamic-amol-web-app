@@ -1,0 +1,10 @@
+{
+  "name": "নামাজ হিসাব",
+  "short_name": "নামাজ হিসাব",
+  "description": "পাঁচ ওয়াক্ত নামাজের হিসাব আর জরিমানার খাতা",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10050D",
+  "theme_color": "#10050D",
+  "orientation": "portrait"
+}
