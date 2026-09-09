@@ -5,7 +5,7 @@ import PageHead from './PageHead';
 import { ChevronIcon, CheckIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { SURAHS } from '../lib/quranMeta';
 import { toBanglaUccharon } from '../lib/uccharon';
-import { ayahAudioUrl } from '../lib/recite';
+import { QARIS, ayahAudioUrl, loadQari, saveQari } from '../lib/recite';
 import { bnNum } from '../lib/store';
 import { getQuran, markQuran } from '../lib/cloud';
 
@@ -93,7 +93,7 @@ function SurahList({ onOpen, readBySurah }) {
 
 /* ---------- এক সুরা পড়া ---------- */
 
-function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
+function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [playing, setPlaying] = useState(null);   // কোন আয়াত বাজছে
@@ -102,16 +102,22 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
   const audioRef = useRef(null);
   const meta = SURAHS[id - 1];
 
-  // সুরা বদলালে বাজনা থামিয়ে দিই
+  // সুরা বা কারী বদলালে যা বাজছিল তা থামিয়ে দিই
   useEffect(() => {
     const a = audioRef.current;
+    if (a) {
+      a.pause();
+      a.removeAttribute('src');
+    }
+    setPlaying(null);
+    setLoading(null);
     return () => {
       if (a) {
         a.pause();
         a.removeAttribute('src');
       }
     };
-  }, [id]);
+  }, [id, qari]);
 
   function playAyah(ayahId) {
     const a = audioRef.current;
@@ -123,7 +129,7 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
     }
     setLoading(ayahId);
     setAudioMsg('');
-    a.src = ayahAudioUrl(id, ayahId);
+    a.src = ayahAudioUrl(id, ayahId, qari);
     a.play()
       .then(() => {
         setPlaying(ayahId);
@@ -136,12 +142,9 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
       });
   }
 
-  // এক আয়াত শেষ হলে পরেরটা আপনিই বাজবে
+  // আয়াত শেষ হলে ওখানেই থামে — নিজে থেকে পরেরটা বাজে না
   function handleEnded() {
-    if (!data || playing === null) return;
-    const next = playing + 1;
-    if (data.verses.some((v) => v.id === next)) playAyah(next);
-    else setPlaying(null);
+    setPlaying(null);
   }
 
   useEffect(() => {
@@ -245,8 +248,22 @@ function SurahView({ id, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
 
 /* ---------- পুরোটা ---------- */
 
+function QariPicker({ qari, onChange }) {
+  return (
+    <label className="qari-pick">
+      <span>তিলাওয়াত</span>
+      <select value={qari} onChange={(e) => onChange(e.target.value)}>
+        {QARIS.map((q) => (
+          <option key={q.id} value={q.id}>{q.name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export default function QuranReader() {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [qari, setQari] = useState(QARIS[0].id);
   const [open, setOpen] = useState(null);
   const [readAyahs, setReadAyahs] = useState([]);
   const [readBySurah, setReadBySurah] = useState({});
@@ -265,7 +282,13 @@ export default function QuranReader() {
 
   useEffect(() => {
     loadTop();
+    setQari(loadQari());
   }, [loadTop]);
+
+  function changeQari(id) {
+    setQari(id);
+    saveQari(id);
+  }
 
   // সুরা খুললে ওই সুরার টিকগুলো আনি
   useEffect(() => {
@@ -317,11 +340,13 @@ export default function QuranReader() {
     <main className="shell">
       <PageHead title="কুরআন" sub="পড়ুন আর কতটুকু হলো দেখুন" />
       <Progress summary={summary} />
+      <QariPicker qari={qari} onChange={changeQari} />
       {msg ? <div className="auth-error">{msg}</div> : null}
 
       {open ? (
         <SurahView
           id={open}
+          qari={qari}
           onBack={() => setOpen(null)}
           readAyahs={readAyahs}
           busy={busy}

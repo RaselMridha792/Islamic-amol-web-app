@@ -2034,3 +2034,45 @@ button {
     transform: rotate(360deg);
   }
 }
+
+/* ---------- কারী বাছাই ---------- */
+
+.qari-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.qari-pick > span {
+  font-size: 12.5px;
+  color: var(--muted);
+  flex: none;
+}
+
+.qari-pick select {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: right;
+  text-align-last: right;
+  padding: 2px 0;
+}
+
+.qari-pick select:focus {
+  outline: none;
+}
+
+/* ড্রপডাউনের ভেতরটা ব্রাউজার আঁকে, তাই ওখানে পড়ার মতো রঙ দিই */
+.qari-pick option {
+  background: var(--bg-soft);
+  color: var(--text);
+}
