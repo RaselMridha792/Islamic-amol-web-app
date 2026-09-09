@@ -137,3 +137,33 @@ export function loadMeta() {
 export function saveMeta(meta) {
   write(KEY_META, meta);
 }
+
+/* ---------- চট করে দেখানোর জন্য জমিয়ে রাখা ---------- */
+// সঙ্গীর নাম-ছবি-হিসাব আর নিজের ছবি ব্রাউজারে রেখে দিই, যাতে রিফ্রেশ করলে
+// সার্ভারের উত্তরের অপেক্ষায় পর্দা ফাঁকা না থাকে। এটা শুধু চোখে দেখানোর জন্য —
+// আসল হিসাব সবসময় সার্ভার থেকেই আসে, আর এলেই এটা বদলে যায়।
+
+const KEY_PARTNER = 'namaz-hisab:partner:v1';
+const KEY_PHOTO = 'namaz-hisab:photo:v1';
+
+export function loadPartnerCache() {
+  return read(KEY_PARTNER, null);
+}
+
+export function savePartnerCache(partner) {
+  write(KEY_PARTNER, partner || null);
+}
+
+export function loadPhotoCache() {
+  return read(KEY_PHOTO, '') || '';
+}
+
+export function savePhotoCache(photo) {
+  write(KEY_PHOTO, photo || '');
+}
+
+// লগআউট করলে সঙ্গীর তথ্য যেন এই ডিভাইসে পড়ে না থাকে
+export function clearPersonCache() {
+  write(KEY_PARTNER, null);
+  write(KEY_PHOTO, '');
+}

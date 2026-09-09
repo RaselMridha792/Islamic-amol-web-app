@@ -45,17 +45,19 @@ export async function GET(req) {
     // ওটা বদলানোর কোনো সুযোগ ক্লায়েন্টে নেই
     let partner = null;
     if (gate.user.partnerId) {
-      const [pRows, pUser] = await Promise.all([
+      const [pRows, pUser, pProf] = await Promise.all([
         sql`
           select to_char(day, 'YYYY-MM-DD') as day, data from nh_days
           where user_id = ${gate.user.partnerId}
         `,
         sql`select username, display_name from nh_users where id = ${gate.user.partnerId} limit 1`,
+        sql`select people from nh_profile where user_id = ${gate.user.partnerId} limit 1`,
       ]);
       const pDays = {};
       pRows.forEach((r) => { pDays[r.day] = r.data || {}; });
       partner = {
         name: pUser[0] ? pUser[0].display_name || pUser[0].username : 'সঙ্গী',
+        photo: (pProf[0] && pProf[0].people && pProf[0].people.photo) || '',
         days: pDays,
       };
     }

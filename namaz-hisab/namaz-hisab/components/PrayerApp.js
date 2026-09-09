@@ -16,9 +16,13 @@ import {
   formatDate,
   formatDayName,
   loadMeta,
+  loadPartnerCache,
+  loadPhotoCache,
   loadRecords,
   loadSoundOn,
   saveMeta,
+  savePartnerCache,
+  savePhotoCache,
   saveRecords,
   shiftDay,
   todayKey,
@@ -50,6 +54,19 @@ export default function PrayerApp() {
   const me = useMemo(
     () => ({ name: user ? user.name || user.username : 'আমি', photo }),
     [user, photo]
+  );
+
+  // লগইনের উত্তরে ছবি এলে সেটাই নিই, আর পরের বারের জন্য জমিয়ে রাখি
+  useEffect(() => {
+    if (user && typeof user.photo === 'string') {
+      setPhoto(user.photo);
+      savePhotoCache(user.photo);
+    }
+  }, [user]);
+
+  const partnerPerson = useMemo(
+    () => (partner ? { name: partner.name, photo: partner.photo || '' } : null),
+    [partner]
   );
 
   const pushToast = useCallback((toast) => {
@@ -110,6 +127,7 @@ export default function PrayerApp() {
       saveMeta(merged.meta);
       setRecords(merged.records);
       setPartner(remote.partner || null);
+      savePartnerCache(remote.partner || null);
 
       if (merged.toPush.length) await pushChanges({ days: merged.toPush });
       setSync('ok');
@@ -125,17 +143,13 @@ export default function PrayerApp() {
     recordsRef.current = r;
     metaRef.current = loadMeta();
     setRecords(r);
+    // জমানো কপি দিয়ে সাথে সাথে দেখাই, তারপর সার্ভারের টাটকাটা এসে বসবে
+    setPartner(loadPartnerCache());
+    setPhoto(loadPhotoCache());
     setSoundOn(loadSoundOn());
     setDateKey(todayKey());
     setReady(true);
     fullSync();
-
-    fetch('/api/profile', { credentials: 'same-origin' })
-      .then((res) => res.json())
-      .then((d) => {
-        if (d && d.photo) setPhoto(d.photo);
-      })
-      .catch(() => {});
 
     const list = timers.current;
     return () => {
@@ -293,7 +307,7 @@ export default function PrayerApp() {
             <>
               <div className="duo-sep" />
               <div className="duo-person">
-                <Avatar person={{ name: partner.name, photo: '' }} />
+                <Avatar person={partnerPerson} />
                 <div className="who">{partner.name}</div>
                 <div className={'amount' + (theirTotal === 0 ? ' zero' : '')}>
                   ৳ {bnNum(theirTotal)}
@@ -316,7 +330,7 @@ export default function PrayerApp() {
               key={prayer.id}
               prayer={prayer}
               me={me}
-              partner={partner ? { name: partner.name, photo: '' } : null}
+              partner={partnerPerson}
               mine={mine}
               theirs={theirs}
               onPick={handlePick}

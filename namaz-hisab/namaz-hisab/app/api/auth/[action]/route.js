@@ -31,7 +31,11 @@ export async function GET(req, ctx) {
   try {
     const token = req.cookies.get(COOKIE)?.value;
     const user = await userFromToken(token);
-    return NextResponse.json({ cloud: true, user });
+    if (!user) return NextResponse.json({ cloud: true, user: null });
+    // ছবিটা এখানেই দিয়ে দিই — নইলে অ্যাপ খোলার সময় আরেকটা আলাদা অনুরোধ লাগত
+    const rows = await db()`select people from nh_profile where user_id = ${user.id} limit 1`;
+    const people = rows[0] && rows[0].people ? rows[0].people : {};
+    return NextResponse.json({ cloud: true, user: { ...user, photo: people.photo || '' } });
   } catch (err) {
     return fail('ডেটাবেসে পৌঁছানো গেল না', 503);
   }

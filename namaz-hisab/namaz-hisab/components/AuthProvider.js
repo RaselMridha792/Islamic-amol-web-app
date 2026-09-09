@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout, register as apiRegister } from '../lib/cloud';
+import { clearPersonCache } from '../lib/store';
 
 const AuthCtx = createContext(null);
 
@@ -48,6 +49,8 @@ export default function AuthProvider({ children }) {
     } catch (err) {
       // সার্ভারে না পৌঁছালেও এই ডিভাইসে বের করে দিই
     }
+    // সঙ্গীর নাম-ছবি যেন এই ডিভাইসে পড়ে না থাকে
+    clearPersonCache();
     setState((s) => ({ ...s, user: null }));
   }, []);
 
