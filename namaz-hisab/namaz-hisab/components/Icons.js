@@ -112,3 +112,59 @@ export function CloudIcon({ size = 18, state = 'off' }) {
     </svg>
   );
 }
+
+export function BookIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 4.8A1.8 1.8 0 0 1 5.8 3H10a2.5 2.5 0 0 1 2 1 2.5 2.5 0 0 1 2-1h4.2A1.8 1.8 0 0 1 20 4.8v12.4a1.8 1.8 0 0 1-1.8 1.8H14a2.5 2.5 0 0 0-2 1 2.5 2.5 0 0 0-2-1H5.8A1.8 1.8 0 0 1 4 17.2V4.8Z" />
+      <path d="M12 5v14" />
+    </svg>
+  );
+}
+
+export function QuizIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.4" />
+      <path d="M12 16.8v.05" />
+    </svg>
+  );
+}
+
+export function HandsIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8.6 20.5c-2.2-1-3.6-3-3.6-5.5V9.2a1.3 1.3 0 0 1 2.6 0v3" />
+      <path d="M15.4 20.5c2.2-1 3.6-3 3.6-5.5V9.2a1.3 1.3 0 0 0-2.6 0v3" />
+      <path d="M9.6 12V4.8a1.3 1.3 0 0 1 2.6 0V11M12.2 11V5.6a1.3 1.3 0 0 1 2.6 0V12" />
+    </svg>
+  );
+}
+
+export function UsersIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="9" cy="8.5" r="3.2" />
+      <path d="M3.5 19.5c.6-2.9 2.8-4.6 5.5-4.6s4.9 1.7 5.5 4.6" />
+      <path d="M16.2 6.1a3.2 3.2 0 0 1 .3 6M17.6 15.4c2 .5 3.4 2 3.9 4.1" />
+    </svg>
+  );
+}
+
+export function LinkIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5" />
+      <path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.5-1.5" />
+    </svg>
+  );
+}
+
+export function StarIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+      <path d="m12 3.6 2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16.6l-5.2 2.9L8 13.7l-4.4-4 5.9-.7L12 3.6Z" />
+    </svg>
+  );
+}

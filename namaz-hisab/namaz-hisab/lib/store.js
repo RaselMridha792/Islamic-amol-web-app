@@ -1,11 +1,5 @@
-const KEY_RECORDS = 'namaz-hisab:records:v1';
-const KEY_PEOPLE = 'namaz-hisab:people:v1';
+const KEY_RECORDS = 'namaz-hisab:records:v2';
 const KEY_SOUND = 'namaz-hisab:sound:v1';
-
-export const DEFAULT_PEOPLE = {
-  p1: { name: 'বউ', photo: '' },
-  p2: { name: 'আমি', photo: '' },
-};
 
 function read(key, fallback) {
   if (typeof window === 'undefined') return fallback;
@@ -33,19 +27,6 @@ export function loadRecords() {
 
 export function saveRecords(records) {
   write(KEY_RECORDS, records);
-}
-
-export function loadPeople() {
-  const saved = read(KEY_PEOPLE, null);
-  if (!saved) return DEFAULT_PEOPLE;
-  return {
-    p1: { ...DEFAULT_PEOPLE.p1, ...(saved.p1 || {}) },
-    p2: { ...DEFAULT_PEOPLE.p2, ...(saved.p2 || {}) },
-  };
-}
-
-export function savePeople(people) {
-  write(KEY_PEOPLE, people);
 }
 
 export function loadSoundOn() {
@@ -146,7 +127,7 @@ export const BN_DAYS_SHORT = ['রবি', 'সোম', 'মঙ্গ', 'বু�
 
 /* ---------- ক্লাউডের সাথে মেলানোর তথ্য ---------- */
 
-const KEY_META = 'namaz-hisab:meta:v1';
+const KEY_META = 'namaz-hisab:meta:v2';
 
 // প্রতিটি দিন কখন শেষ বদলেছে, মিলিসেকেন্ডে — কোন কপিটা নতুন তা এতেই বুঝি
 export function loadMeta() {

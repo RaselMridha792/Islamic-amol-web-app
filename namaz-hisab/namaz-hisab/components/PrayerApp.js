@@ -3,81 +3,54 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PrayerCard from './PrayerCard';
 import MonthReport from './MonthReport';
-import SettingsSheet from './SettingsSheet';
-import AuthSheet from './AuthSheet';
+import PageHead from './PageHead';
 import ToastStack from './Toast';
 import Avatar from './Avatar';
-import {
-  ChevronIcon,
-  CloudIcon,
-  CrescentIcon,
-  GearIcon,
-  SoundOffIcon,
-  SoundOnIcon,
-} from './Icons';
+import { useAuth } from './AuthProvider';
+import { ChevronIcon, CloudIcon } from './Icons';
 import { PRAYERS, STATUS_MAP, dayTotal, dayFilled } from '../lib/prayers';
 import { playSound, warmUpAudio } from '../lib/sound';
+import { mergeRecords, pullAll, pushChanges } from '../lib/cloud';
 import {
-  PROFILE_STAMP,
-  fetchMe,
-  login as apiLogin,
-  logout as apiLogout,
-  mergeProfile,
-  mergeRecords,
-  pullAll,
-  pushChanges,
-  register as apiRegister,
-} from '../lib/cloud';
-import {
-  DEFAULT_PEOPLE,
   bnNum,
   formatDate,
   formatDayName,
   loadMeta,
-  loadPeople,
   loadRecords,
   loadSoundOn,
-  savePeople,
   saveMeta,
   saveRecords,
-  saveSoundOn,
   shiftDay,
   todayKey,
 } from '../lib/store';
 
-const EMPTY_DAY = { p1: {}, p2: {} };
+const EMPTY = {};
 const PULL_EVERY = 60000;
 
-function normalizePeople(raw) {
-  return {
-    p1: { ...DEFAULT_PEOPLE.p1, ...((raw && raw.p1) || {}) },
-    p2: { ...DEFAULT_PEOPLE.p2, ...((raw && raw.p2) || {}) },
-  };
-}
-
 export default function PrayerApp() {
+  const { user } = useAuth();
+
   const [ready, setReady] = useState(false);
-  const [people, setPeople] = useState(DEFAULT_PEOPLE);
   const [records, setRecords] = useState({});
+  const [partner, setPartner] = useState(null); // { name, days }
+  const [photo, setPhoto] = useState('');
   const [dateKey, setDateKey] = useState(todayKey());
   const [soundOn, setSoundOn] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [account, setAccount] = useState({ cloud: false, user: null });
-  const [sync, setSync] = useState('off');
+  const [sync, setSync] = useState('syncing');
   const [toasts, setToasts] = useState([]);
   const monthRef = useRef(null);
   const timers = useRef([]);
 
-  // সবসময়ের টাটকা কপি, যাতে সিঙ্ক করার সময় পুরনো ডেটা না পাঠাই
   const recordsRef = useRef({});
   const metaRef = useRef({});
-  const peopleRef = useRef(DEFAULT_PEOPLE);
-  const signedInRef = useRef(false);
   const pendingRef = useRef(new Set());
   const pushTimer = useRef(null);
-  // একসাথে দুইবার মেলানো বা মোছার মাঝখানে মেলানো ঠেকাই
   const busyRef = useRef(false);
+
+  const me = useMemo(
+    () => ({ name: user ? user.name || user.username : 'আমি', photo }),
+    [user, photo]
+  );
 
   const pushToast = useCallback((toast) => {
     const id = Date.now() + Math.random();
@@ -88,28 +61,19 @@ export default function PrayerApp() {
       }, 2300)
     );
     timers.current.push(
-      setTimeout(() => {
-        setToasts((list) => list.filter((t) => t.id !== id));
-      }, 2560)
+      setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), 2560)
     );
   }, []);
 
-  /* ---------- সিঙ্ক ---------- */
+  /* ---------- সার্ভারের সাথে মেলানো ---------- */
 
-  const dropSession = useCallback(() => {
-    signedInRef.current = false;
-    setAccount((a) => ({ ...a, user: null }));
-    setSync('off');
-  }, []);
-
-  // জমে থাকা দিনগুলো সার্ভারে পাঠাই
   const flushPush = useCallback(async () => {
-    if (!signedInRef.current || pendingRef.current.size === 0) return;
+    if (pendingRef.current.size === 0) return;
     const keys = Array.from(pendingRef.current);
     pendingRef.current.clear();
     const days = keys.map((k) => ({
       day: k,
-      data: recordsRef.current[k] || EMPTY_DAY,
+      data: recordsRef.current[k] || EMPTY,
       updatedAt: metaRef.current[k] || Date.now(),
     }));
     setSync('syncing');
@@ -117,16 +81,14 @@ export default function PrayerApp() {
       await pushChanges({ days });
       setSync('ok');
     } catch (err) {
-      // পাঠানো না গেলে আবার সারিতে রেখে দিই, পরের বার যাবে
+      // পাঠানো না গেলে সারিতে ফিরিয়ে রাখি, পরের বার যাবে
       keys.forEach((k) => pendingRef.current.add(k));
-      if (err.status === 401) dropSession();
-      else setSync('error');
+      setSync('error');
     }
-  }, [dropSession]);
+  }, []);
 
   const queueDay = useCallback(
     (key) => {
-      if (!signedInRef.current) return;
       pendingRef.current.add(key);
       if (pushTimer.current) clearTimeout(pushTimer.current);
       pushTimer.current = setTimeout(flushPush, 900);
@@ -134,86 +96,56 @@ export default function PrayerApp() {
     [flushPush]
   );
 
-  // পুরো খাতা মিলিয়ে নিই — যেটা পরে বদলেছে সেটাই থাকে
   const fullSync = useCallback(async () => {
-    if (!signedInRef.current || busyRef.current) return;
+    if (busyRef.current) return;
     busyRef.current = true;
     setSync('syncing');
     try {
       const remote = await pullAll();
       const merged = mergeRecords(recordsRef.current, metaRef.current, remote.days || {});
-      const prof = mergeProfile(
-        peopleRef.current,
-        metaRef.current[PROFILE_STAMP] || 0,
-        remote.profile
-      );
 
       recordsRef.current = merged.records;
-      metaRef.current = { ...merged.meta, [PROFILE_STAMP]: prof.at };
+      metaRef.current = merged.meta;
       saveRecords(merged.records);
-      saveMeta(metaRef.current);
+      saveMeta(merged.meta);
       setRecords(merged.records);
+      setPartner(remote.partner || null);
 
-      if (!prof.push) {
-        const next = normalizePeople(prof.people);
-        peopleRef.current = next;
-        setPeople(next);
-        savePeople(next);
-      }
-
-      if (merged.toPush.length || prof.push) {
-        await pushChanges({
-          days: merged.toPush,
-          profile: prof.push ? { people: peopleRef.current, updatedAt: prof.at } : null,
-        });
-      }
+      if (merged.toPush.length) await pushChanges({ days: merged.toPush });
       setSync('ok');
     } catch (err) {
-      if (err.status === 401) dropSession();
-      else setSync('error');
+      setSync('error');
     } finally {
       busyRef.current = false;
     }
-  }, [dropSession]);
+  }, []);
 
   useEffect(() => {
-    const p = loadPeople();
     const r = loadRecords();
-    const m = loadMeta();
-    peopleRef.current = p;
     recordsRef.current = r;
-    metaRef.current = m;
-    setPeople(p);
+    metaRef.current = loadMeta();
     setRecords(r);
     setSoundOn(loadSoundOn());
     setDateKey(todayKey());
     setReady(true);
+    fullSync();
 
-    let alive = true;
-    fetchMe()
-      .then((res) => {
-        if (!alive) return;
-        setAccount({ cloud: Boolean(res.cloud), user: res.user || null });
-        if (res.user) {
-          signedInRef.current = true;
-          fullSync();
-        }
+    fetch('/api/profile', { credentials: 'same-origin' })
+      .then((res) => res.json())
+      .then((d) => {
+        if (d && d.photo) setPhoto(d.photo);
       })
-      .catch(() => {
-        // সার্ভারে পৌঁছানো না গেলে অ্যাপ শুধু এই ডিভাইসেই চলবে
-      });
+      .catch(() => {});
 
     const list = timers.current;
     return () => {
-      alive = false;
       list.forEach(clearTimeout);
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [fullSync]);
 
-  // অন্য ডিভাইসের বদল ধরার জন্য মাঝেমধ্যে আর ট্যাবে ফিরলে মিলিয়ে নিই
+  // সঙ্গী অন্য ফোন থেকে লিখলে যেন দেখতে পাই
   useEffect(() => {
-    if (!account.user) return undefined;
     const onFocus = () => fullSync();
     window.addEventListener('focus', onFocus);
     const iv = setInterval(fullSync, PULL_EVERY);
@@ -221,32 +153,31 @@ export default function PrayerApp() {
       window.removeEventListener('focus', onFocus);
       clearInterval(iv);
     };
-  }, [account.user, fullSync]);
+  }, [fullSync]);
 
-  /* ---------- দিনের হিসাব ---------- */
+  /* ---------- এই দিনের হিসাব ---------- */
 
-  const day = records[dateKey] || EMPTY_DAY;
+  const mine = records[dateKey] || EMPTY;
+  const theirs = partner && partner.days ? partner.days[dateKey] || EMPTY : EMPTY;
   const isToday = dateKey === todayKey();
 
-  const totals = useMemo(() => ({ p1: dayTotal(day.p1), p2: dayTotal(day.p2) }), [day]);
-  const filled = dayFilled(day.p1) + dayFilled(day.p2);
+  const myTotal = useMemo(() => dayTotal(mine), [mine]);
+  const theirTotal = useMemo(() => dayTotal(theirs), [theirs]);
+  const filled = dayFilled(mine);
 
   const handlePick = useCallback(
-    (personId, prayerId, statusId) => {
+    (prayerId, statusId) => {
       warmUpAudio();
       const prayer = PRAYERS.find((p) => p.id === prayerId);
       const status = STATUS_MAP[statusId];
-      const person = peopleRef.current[personId];
 
-      const base = recordsRef.current[dateKey] || EMPTY_DAY;
-      const currentPerson = base[personId] || {};
-      const undo = currentPerson[prayerId] === statusId;
+      const base = recordsRef.current[dateKey] || EMPTY;
+      const undo = base[prayerId] === statusId;
+      const nextDay = { ...base };
+      if (undo) delete nextDay[prayerId];
+      else nextDay[prayerId] = statusId;
 
-      const nextPerson = { ...currentPerson };
-      if (undo) delete nextPerson[prayerId];
-      else nextPerson[prayerId] = statusId;
-
-      const next = { ...recordsRef.current, [dateKey]: { ...base, [personId]: nextPerson } };
+      const next = { ...recordsRef.current, [dateKey]: nextDay };
       const at = Date.now();
       recordsRef.current = next;
       metaRef.current = { ...metaRef.current, [dateKey]: at };
@@ -259,32 +190,26 @@ export default function PrayerApp() {
         playSound('clear', soundOn);
         pushToast({
           tone: 'info',
-          title: person.name + '-এর ' + prayer.bn + ' আবার খালি',
+          title: prayer.bn + ' আবার খালি',
           body: 'এই ওয়াক্তের হিসাব মুছে দেওয়া হলো',
         });
         return;
       }
 
       playSound(statusId, soundOn);
-
       if (statusId === 'prayed') {
-        pushToast({
-          tone: 'good',
-          title: person.name + ' ' + prayer.bn + ' পড়েছে',
-          body: 'মাশাআল্লাহ, কোনো জরিমানা নেই',
-          amount: '৳ ০',
-        });
+        pushToast({ tone: 'good', title: prayer.bn + ' পড়েছেন', body: 'মাশাআল্লাহ', amount: '৳ ০' });
       } else if (statusId === 'qaza') {
         pushToast({
           tone: 'warn',
-          title: person.name + '-এর ' + prayer.bn + ' কাজা',
+          title: prayer.bn + ' কাজা',
           body: 'অর্ধেক জরিমানা খাতায় উঠল',
           amount: '+ ৳ ' + bnNum(status.fine),
         });
       } else {
         pushToast({
           tone: 'bad',
-          title: person.name + ' ' + prayer.bn + ' পড়েনি',
+          title: prayer.bn + ' পড়া হয়নি',
           body: 'পুরো জরিমানা খাতায় উঠল',
           amount: '+ ৳ ' + bnNum(status.fine),
         });
@@ -300,118 +225,7 @@ export default function PrayerApp() {
     playSound('save', soundOn);
   }
 
-  function toggleSound() {
-    const next = !soundOn;
-    setSoundOn(next);
-    saveSoundOn(next);
-    warmUpAudio();
-    playSound('save', next);
-    pushToast({
-      tone: 'info',
-      title: next ? 'শব্দ চালু' : 'শব্দ বন্ধ',
-      body: next ? 'প্রতিটি ট্যাপে ছোট একটা সুর বাজবে' : 'এখন থেকে চুপচাপ চলবে',
-    });
-  }
-
-  function handleSavePeople(nextPeople) {
-    const at = Date.now();
-    peopleRef.current = nextPeople;
-    metaRef.current = { ...metaRef.current, [PROFILE_STAMP]: at };
-    setPeople(nextPeople);
-    savePeople(nextPeople);
-    saveMeta(metaRef.current);
-    setSettingsOpen(false);
-    playSound('save', soundOn);
-
-    if (signedInRef.current) {
-      setSync('syncing');
-      pushChanges({ days: [], profile: { people: nextPeople, updatedAt: at } })
-        .then(() => setSync('ok'))
-        .catch((err) => (err.status === 401 ? dropSession() : setSync('error')));
-    }
-
-    pushToast({
-      tone: 'info',
-      title: 'সেভ হয়ে গেছে',
-      body: nextPeople.p1.name + ' আর ' + nextPeople.p2.name + '-এর হিসাব চলবে',
-    });
-  }
-
-  function handleClearAll() {
-    recordsRef.current = {};
-    metaRef.current = { [PROFILE_STAMP]: metaRef.current[PROFILE_STAMP] || 0 };
-    pendingRef.current.clear();
-    setRecords({});
-    saveRecords({});
-    saveMeta(metaRef.current);
-    setSettingsOpen(false);
-
-    if (signedInRef.current) {
-      busyRef.current = true;
-      setSync('syncing');
-      pushChanges({ days: [], wipe: true })
-        .then(() => setSync('ok'))
-        .catch((err) => (err.status === 401 ? dropSession() : setSync('error')))
-        .finally(() => {
-          busyRef.current = false;
-        });
-    }
-
-    pushToast({
-      tone: 'bad',
-      title: 'সব হিসাব মুছে গেছে',
-      body: signedInRef.current ? 'অ্যাকাউন্ট থেকেও মুছে দেওয়া হলো' : 'নতুন করে শুরু করা যাবে',
-    });
-  }
-
-  /* ---------- অ্যাকাউন্ট ---------- */
-
-  async function finishAuth(res) {
-    setAccount({ cloud: true, user: res.user });
-    signedInRef.current = true;
-    setAuthOpen(false);
-    setSettingsOpen(false);
-    playSound('save', soundOn);
-    pushToast({
-      tone: 'good',
-      title: res.user.username + ' — লগইন হয়েছে',
-      body: 'এই ফোনের হিসাব অ্যাকাউন্টে মিলিয়ে নেওয়া হচ্ছে',
-    });
-    await fullSync();
-  }
-
-  async function handleLogin(username, password) {
-    await finishAuth(await apiLogin(username, password));
-  }
-
-  async function handleRegister(username, password) {
-    await finishAuth(await apiRegister(username, password));
-  }
-
-  async function handleLogout() {
-    try {
-      await apiLogout();
-    } catch (err) {
-      // সার্ভারে না পৌঁছালেও এই ডিভাইসে লগআউট করে দিই
-    }
-    signedInRef.current = false;
-    pendingRef.current.clear();
-    setAccount((a) => ({ ...a, user: null }));
-    setSync('off');
-    setSettingsOpen(false);
-    pushToast({
-      tone: 'info',
-      title: 'লগআউট হয়ে গেছে',
-      body: 'হিসাব এই ফোনেই থেকে যাচ্ছে',
-    });
-  }
-
-  const syncLabel = {
-    syncing: 'মেলানো হচ্ছে…',
-    ok: 'সব মিলে আছে',
-    error: 'মেলানো যায়নি',
-    off: account.cloud ? 'লগইন করা নেই' : 'শুধু এই ফোনে',
-  }[sync];
+  const syncLabel = { syncing: 'মেলানো হচ্ছে…', ok: 'সব মিলে আছে', error: 'মেলানো যায়নি' }[sync];
 
   if (!ready) {
     return (
@@ -428,46 +242,21 @@ export default function PrayerApp() {
       <ToastStack toasts={toasts} />
 
       <main className="shell">
-        <div className="topbar">
-          <div className="brand">
-            <div className="crescent">
-              <CrescentIcon />
-            </div>
-            <div className="brand-name">
-              <h1>একসাথে দ্বীনের পথে</h1>
-              <p>DeenTogether</p>
-            </div>
-          </div>
-          <div className="icon-row">
-            {account.cloud ? (
-              <button
-                type="button"
-                className={'icon-btn sync-' + sync}
-                onClick={() => (account.user ? fullSync() : setAuthOpen(true))}
-                aria-label={syncLabel}
-                title={syncLabel}
-              >
-                <CloudIcon state={sync} />
-              </button>
-            ) : null}
+        <PageHead
+          title="নামাজের খাতা"
+          sub="পাঁচ ওয়াক্তের হিসাব"
+          right={
             <button
               type="button"
-              className="icon-btn"
-              onClick={toggleSound}
-              aria-label={soundOn ? 'শব্দ বন্ধ করুন' : 'শব্দ চালু করুন'}
+              className={'icon-btn sync-' + sync}
+              onClick={fullSync}
+              aria-label={syncLabel}
+              title={syncLabel}
             >
-              {soundOn ? <SoundOnIcon /> : <SoundOffIcon />}
+              <CloudIcon state={sync} />
             </button>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="সেটিংস"
-            >
-              <GearIcon />
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="datebar">
           <button type="button" className="nav" onClick={() => goDay(-1)} aria-label="আগের দিন">
@@ -495,27 +284,41 @@ export default function PrayerApp() {
         ) : null}
 
         <div className="duo" style={{ marginTop: 16 }}>
-          {['p1', 'p2'].map((id, i) => (
-            <div key={id} style={{ display: 'contents' }}>
-              {i === 1 ? <div className="duo-sep" /> : null}
+          <div className="duo-person">
+            <Avatar person={me} />
+            <div className="who">{me.name}</div>
+            <div className={'amount' + (myTotal === 0 ? ' zero' : '')}>৳ {bnNum(myTotal)}</div>
+          </div>
+          {partner ? (
+            <>
+              <div className="duo-sep" />
               <div className="duo-person">
-                <Avatar person={people[id]} />
-                <div className="who">{people[id].name}</div>
-                <div className={'amount' + (totals[id] === 0 ? ' zero' : '')}>
-                  ৳ {bnNum(totals[id])}
+                <Avatar person={{ name: partner.name, photo: '' }} />
+                <div className="who">{partner.name}</div>
+                <div className={'amount' + (theirTotal === 0 ? ' zero' : '')}>
+                  ৳ {bnNum(theirTotal)}
                 </div>
               </div>
-            </div>
-          ))}
+            </>
+          ) : null}
         </div>
+
+        {!partner ? (
+          <div className="empty-note" style={{ marginTop: 12 }}>
+            সঙ্গীর সাথে জোড়া বাঁধেননি। সেটিংসে গিয়ে কোড দিয়ে জোড়া বাঁধলে একে অপরের হিসাব দেখতে
+            পাবেন।
+          </div>
+        ) : null}
 
         <div className="cards">
           {PRAYERS.map((prayer) => (
             <PrayerCard
               key={prayer.id}
               prayer={prayer}
-              people={people}
-              record={day}
+              me={me}
+              partner={partner ? { name: partner.name, photo: '' } : null}
+              mine={mine}
+              theirs={theirs}
               onPick={handlePick}
             />
           ))}
@@ -524,8 +327,9 @@ export default function PrayerApp() {
         <div ref={monthRef}>
           <MonthReport
             records={records}
+            partner={partner}
+            meName={me.name}
             dateKey={dateKey}
-            people={people}
             onSelectDay={(k) => {
               setDateKey(k);
               playSound('save', soundOn);
@@ -533,26 +337,25 @@ export default function PrayerApp() {
             }}
           />
         </div>
-
-        <p className="dua">
-          <span className="ar">إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا</span>
-          নিশ্চয়ই নামাজ মুমিনদের উপর নির্দিষ্ট সময়ে ফরজ · সূরা আন-নিসা, আয়াত ১০৩
-        </p>
       </main>
 
       <div className="footbar">
         <div className="footbar-inner">
           <div>
             <div className="lead">
-              {isToday ? 'আজকের জরিমানা' : 'এই দিনের জরিমানা'} ·{' '}
-              {bnNum(filled)}/{bnNum(PRAYERS.length * 2)} ওয়াক্ত লেখা
+              {isToday ? 'আজকের জরিমানা' : 'এই দিনের জরিমানা'} · {bnNum(filled)}/
+              {bnNum(PRAYERS.length)} ওয়াক্ত লেখা
             </div>
             <div className="pair">
-              <span>৳ {bnNum(totals.p1)}</span>
-              <small>{people.p1.name}</small>
-              <span style={{ color: 'var(--muted)' }}>·</span>
-              <span>৳ {bnNum(totals.p2)}</span>
-              <small>{people.p2.name}</small>
+              <span>৳ {bnNum(myTotal)}</span>
+              <small>{me.name}</small>
+              {partner ? (
+                <>
+                  <span style={{ color: 'var(--muted)' }}>·</span>
+                  <span>৳ {bnNum(theirTotal)}</span>
+                  <small>{partner.name}</small>
+                </>
+              ) : null}
             </div>
           </div>
           <button
@@ -569,33 +372,6 @@ export default function PrayerApp() {
           </button>
         </div>
       </div>
-
-      {settingsOpen ? (
-        <SettingsSheet
-          people={people}
-          soundOn={soundOn}
-          account={account}
-          syncLabel={syncLabel}
-          onToggleSound={toggleSound}
-          onSave={handleSavePeople}
-          onClose={() => setSettingsOpen(false)}
-          onClearAll={handleClearAll}
-          onOpenAuth={() => {
-            setSettingsOpen(false);
-            setAuthOpen(true);
-          }}
-          onLogout={handleLogout}
-          onError={(msg) => pushToast({ tone: 'bad', title: 'ছবি যোগ হয়নি', body: msg })}
-        />
-      ) : null}
-
-      {authOpen ? (
-        <AuthSheet
-          onLogin={handleLogin}
-          onRegister={handleRegister}
-          onClose={() => setAuthOpen(false)}
-        />
-      ) : null}
     </>
   );
 }

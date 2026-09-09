@@ -57,13 +57,19 @@ export async function userFromToken(token) {
   await ensureSchema();
   const sql = db();
   const rows = await sql`
-    select u.id, u.username
+    select u.id, u.username, u.display_name, u.partner_id
     from nh_sessions s
     join nh_users u on u.id = s.user_id
     where s.token_hash = ${hashToken(token)} and s.expires_at > now()
     limit 1
   `;
-  return rows[0] || null;
+  if (!rows[0]) return null;
+  return {
+    id: rows[0].id,
+    username: rows[0].username,
+    name: rows[0].display_name || rows[0].username,
+    partnerId: rows[0].partner_id ? Number(rows[0].partner_id) : null,
+  };
 }
 
 export function cookieOptions(expires) {

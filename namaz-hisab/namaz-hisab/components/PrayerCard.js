@@ -2,15 +2,16 @@
 
 import Avatar from './Avatar';
 import { MosqueIcon } from './Icons';
-import { STATUSES } from '../lib/prayers';
+import { STATUS_MAP, STATUSES } from '../lib/prayers';
 import { bnNum } from '../lib/store';
 
-function Side({ personId, person, chosen, onPick }) {
+// আমার দিক — এখানেই ট্যাপ করে হিসাব লেখা হয়
+function MySide({ me, chosen, onPick }) {
   return (
     <div className="side">
       <div className="side-head">
-        <Avatar person={person} small />
-        <span>{person.name}</span>
+        <Avatar person={me} small />
+        <span>{me.name}</span>
       </div>
       {STATUSES.map((s) => {
         const on = chosen === s.id;
@@ -20,7 +21,7 @@ function Side({ personId, person, chosen, onPick }) {
             type="button"
             className={'choice ' + s.tone + (on ? ' on' : '')}
             aria-pressed={on}
-            onClick={() => onPick(personId, s.id)}
+            onClick={() => onPick(s.id)}
           >
             <span className="dot" />
             {s.short}
@@ -32,7 +33,25 @@ function Side({ personId, person, chosen, onPick }) {
   );
 }
 
-export default function PrayerCard({ prayer, people, record, onPick }) {
+// সঙ্গীর দিক — শুধু দেখার, ট্যাপ করা যায় না
+function PartnerSide({ partner, chosen }) {
+  const s = chosen ? STATUS_MAP[chosen] : null;
+  return (
+    <div className="side">
+      <div className="side-head">
+        <Avatar person={partner} small />
+        <span>{partner.name}</span>
+      </div>
+      <div className={'peek' + (s ? ' ' + s.tone : ' none')}>
+        <span className="dot" />
+        <b>{s ? s.short : 'এখনো লেখেনি'}</b>
+        {s ? <span className="cost">{s.fine === 0 ? '৳০' : '৳' + bnNum(s.fine)}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+export default function PrayerCard({ prayer, me, partner, mine, theirs, onPick }) {
   return (
     <section className="card">
       <header className="card-head">
@@ -48,20 +67,18 @@ export default function PrayerCard({ prayer, people, record, onPick }) {
         <div className="arabic">{prayer.ar}</div>
       </header>
 
-      <div className="split">
-        <Side
-          personId="p1"
-          person={people.p1}
-          chosen={record.p1 ? record.p1[prayer.id] : undefined}
-          onPick={(personId, statusId) => onPick(personId, prayer.id, statusId)}
+      <div className={'split' + (partner ? '' : ' solo')}>
+        <MySide
+          me={me}
+          chosen={mine ? mine[prayer.id] : undefined}
+          onPick={(statusId) => onPick(prayer.id, statusId)}
         />
-        <div className="split-line" />
-        <Side
-          personId="p2"
-          person={people.p2}
-          chosen={record.p2 ? record.p2[prayer.id] : undefined}
-          onPick={(personId, statusId) => onPick(personId, prayer.id, statusId)}
-        />
+        {partner ? (
+          <>
+            <div className="split-line" />
+            <PartnerSide partner={partner} chosen={theirs ? theirs[prayer.id] : undefined} />
+          </>
+        ) : null}
       </div>
     </section>
   );

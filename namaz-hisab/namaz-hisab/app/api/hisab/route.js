@@ -41,7 +41,26 @@ export async function GET(req) {
       ? { people: profRows[0].people || null, updatedAt: Number(profRows[0].updated_at) }
       : null;
 
-    return NextResponse.json({ days, profile: prof });
+    // সঙ্গীর নামাজ শুধু দেখার জন্য — এখানে সময়-ছাপ পাঠাই না, কারণ
+    // ওটা বদলানোর কোনো সুযোগ ক্লায়েন্টে নেই
+    let partner = null;
+    if (gate.user.partnerId) {
+      const [pRows, pUser] = await Promise.all([
+        sql`
+          select to_char(day, 'YYYY-MM-DD') as day, data from nh_days
+          where user_id = ${gate.user.partnerId}
+        `,
+        sql`select username, display_name from nh_users where id = ${gate.user.partnerId} limit 1`,
+      ]);
+      const pDays = {};
+      pRows.forEach((r) => { pDays[r.day] = r.data || {}; });
+      partner = {
+        name: pUser[0] ? pUser[0].display_name || pUser[0].username : 'সঙ্গী',
+        days: pDays,
+      };
+    }
+
+    return NextResponse.json({ days, profile: prof, partner });
   } catch (err) {
     return NextResponse.json({ error: 'খাতা আনা গেল না' }, { status: 503 });
   }

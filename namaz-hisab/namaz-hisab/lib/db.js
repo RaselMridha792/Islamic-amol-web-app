@@ -55,6 +55,75 @@ export function ensureSchema() {
         updated_at  bigint not null
       )
     `;
+
+    /* ---- নাম আর জোড়া বাঁধা ---- */
+    await sql`alter table nh_users add column if not exists display_name text`;
+    // সঙ্গী কে — দুজনেরই সারিতে বসে, তাই দুদিক থেকেই দেখা যায়
+    await sql`alter table nh_users add column if not exists partner_id bigint references nh_users(id) on delete set null`;
+    await sql`
+      create table if not exists nh_pair_codes (
+        code        text primary key,
+        user_id     bigint not null references nh_users(id) on delete cascade,
+        expires_at  timestamptz not null
+      )
+    `;
+
+    /* ---- কুরআন পড়ার হিসাব: কোন আয়াত পড়া হয়েছে ---- */
+    await sql`
+      create table if not exists nh_quran (
+        user_id  bigint not null references nh_users(id) on delete cascade,
+        surah    int not null,
+        ayah     int not null,
+        juz      int not null default 1,
+        read_at  timestamptz not null default now(),
+        primary key (user_id, surah, ayah)
+      )
+    `;
+    // পারা কোনটা তা লেখার সময়ই বসিয়ে রাখি, তাহলে "কত পারা শেষ" গোনা সস্তা হয়
+    await sql`alter table nh_quran add column if not exists juz int not null default 1`;
+
+    /* ---- কুইজ ---- */
+    await sql`
+      create table if not exists nh_questions (
+        id        bigserial primary key,
+        topic     text not null,
+        question  text not null,
+        options   jsonb not null,
+        answer    int not null,
+        source    text not null default 'auto'
+      )
+    `;
+    // একই প্রশ্ন দুবার যেন না ঢোকে
+    await sql`create unique index if not exists nh_questions_uniq on nh_questions(md5(question))`;
+    await sql`
+      create table if not exists nh_quiz (
+        user_id  bigint not null references nh_users(id) on delete cascade,
+        day      date not null,
+        qids     jsonb not null,
+        primary key (user_id, day)
+      )
+    `;
+    await sql`
+      create table if not exists nh_quiz_answer (
+        user_id  bigint not null references nh_users(id) on delete cascade,
+        day      date not null,
+        qid      bigint not null,
+        chosen   int not null,
+        correct  boolean not null,
+        primary key (user_id, day, qid)
+      )
+    `;
+
+    /* ---- দোয়া আর ছোট আমলের টিক ---- */
+    await sql`
+      create table if not exists nh_ticks (
+        user_id  bigint not null references nh_users(id) on delete cascade,
+        day      date not null,
+        kind     text not null,
+        item     text not null,
+        primary key (user_id, day, kind, item)
+      )
+    `;
   })().catch((err) => {
     ready = null;
     throw err;

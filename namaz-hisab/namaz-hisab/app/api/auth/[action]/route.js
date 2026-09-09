@@ -77,22 +77,23 @@ export async function POST(req, ctx) {
     if (action === 'register') {
       const taken = await sql`select id from nh_users where username = ${uname.value} limit 1`;
       if (taken.length) return fail('এই ইউজারনেম আগেই নেওয়া হয়েছে');
+      const name = String(body.displayName || '').trim().slice(0, 24) || uname.value;
       const rows = await sql`
-        insert into nh_users (username, pass_hash)
-        values (${uname.value}, ${hashPassword(pw.value)})
-        returning id, username
+        insert into nh_users (username, pass_hash, display_name)
+        values (${uname.value}, ${hashPassword(pw.value)}, ${name})
+        returning id, username, display_name
       `;
-      user = rows[0];
+      user = { id: rows[0].id, username: rows[0].username, name: rows[0].display_name };
     } else {
       const rows = await sql`
-        select id, username, pass_hash from nh_users where username = ${uname.value} limit 1
+        select id, username, pass_hash, display_name from nh_users where username = ${uname.value} limit 1
       `;
       const found = rows[0];
       // ইউজারনেম ভুল না পাসওয়ার্ড ভুল, সেটা আলাদা করে বলি না
       if (!found || !verifyPassword(pw.value, found.pass_hash)) {
         return fail('ইউজারনেম বা পাসওয়ার্ড মিলছে না', 401);
       }
-      user = { id: found.id, username: found.username };
+      user = { id: found.id, username: found.username, name: found.display_name || found.username };
     }
 
     const { token, expires } = await createSession(user.id);
