@@ -12,6 +12,10 @@ import { getQuran, markQuran } from '../lib/cloud';
 
 const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30 };
 
+// একবারে কয়টা আয়াত পাতায় বসবে। বাকারায় ২৮৬টা — সব একসাথে বসালে কম শক্তির
+// ফোনে পাতাটা খুলতেই দেরি হয়ে যায়।
+const CHUNK = 30;
+
 /* ---------- উপরে কতটুকু পড়া হলো ---------- */
 
 function Progress({ summary }) {
@@ -172,6 +176,50 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
   const readSet = useMemo(() => new Set(readAyahs), [readAyahs]);
   const allRead = data ? data.verses.every((v) => readSet.has(v.id)) : false;
 
+  // উচ্চারণটা আগে প্রতিবার পাতা আঁকার সময় নতুন করে বানানো হতো — একটা টিক
+  // দিলেই গোটা সুরার আয়াতগুলো আবার হিসাব হতো। এখন যেটা পর্দায় এসেছে কেবল
+  // তারটাই বানাই, আর বানানোটা জমা রাখি, তাই দ্বিতীয়বার আর খাটতে হয় না।
+  //
+  // সুরা বদলালে জমানোটা ফেলে দিতে হয় — নইলে সুরা ৩-এর ১ নম্বর আয়াতে সুরা
+  // ২-এর ১ নম্বরটা দেখাবে। তাই আঁকার সময়েই মিলিয়ে নিই, effect-এর অপেক্ষায় নয়।
+  const cacheRef = useRef({ id: null, map: null });
+  if (cacheRef.current.id !== id) cacheRef.current = { id, map: new Map() };
+
+  const uccharonOf = (v) => {
+    const box = cacheRef.current.map;
+    const hit = box.get(v.id);
+    if (hit !== undefined) return hit;
+    const made = toBanglaUccharon(v.text, id, v.id);
+    box.set(v.id, made);
+    return made;
+  };
+
+  // পাতায় একসাথে সব আয়াত না বসিয়ে ধাপে ধাপে — নিচে নামলে আরও আসে।
+  // বাকারা খুললে শুরুতে ৩০টা, ২৮৬টা নয়।
+  const [shown, setShown] = useState(CHUNK);
+  const tailRef = useRef(null);
+
+  useEffect(() => {
+    setShown(CHUNK);
+  }, [id]);
+
+  useEffect(() => {
+    const node = tailRef.current;
+    if (!node || !data || shown >= data.verses.length) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown((n) => Math.min(n + CHUNK, data.verses.length));
+        }
+      },
+      { rootMargin: '600px' }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [data, shown]);
+
+  const visible = data ? data.verses.slice(0, shown) : [];
+
   return (
     <>
       <div className="surah-head">
@@ -204,7 +252,7 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
 
       {data ? (
         <div className="ayah-list">
-          {data.verses.map((v) => {
+          {visible.map((v) => {
             const on = readSet.has(v.id);
             return (
               <div key={v.id} className={'ayah' + (on ? ' read' : '')}>
@@ -237,11 +285,19 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
                   </div>
                 </div>
                 <p className="ayah-ar">{v.text}</p>
-                <p className="ayah-tr">{toBanglaUccharon(v.text, id, v.id)}</p>
+                <p className="ayah-tr">{uccharonOf(v)}</p>
                 <p className="ayah-bn">{v.translation}</p>
               </div>
             );
           })}
+
+          {shown < data.verses.length ? (
+            <div ref={tailRef} className="ayah-more">
+              <button type="button" className="btn wide" onClick={() => setShown(data.verses.length)}>
+                বাকি {bnNum(data.verses.length - shown)} আয়াত দেখুন
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </>

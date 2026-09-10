@@ -12,6 +12,7 @@ import { LinkIcon } from './Icons';
 import InstallButton from './InstallButton';
 import { currentSubscription, disablePush, enablePush, pushSupported, testPush } from '../lib/pushClient';
 import { CITIES, DEFAULT_PLACE, hhmm, timesFor } from '../lib/prayerTimes';
+import { guessLite, loadLiteChoice, saveLiteChoice } from '../lib/lite';
 
 // ছবি ছোট করে নিই যাতে সহজে জমা থাকে
 function shrinkImage(file, max = 260) {
@@ -151,6 +152,7 @@ export default function SettingsSheet({ onClose }) {
   const [name, setName] = useState(user ? user.name || user.username : '');
   const [photo, setPhoto] = useState('');
   const [soundOn, setSoundOn] = useState(true);
+  const [lite, setLite] = useState('auto');
   const [hardQuiz, setHardQuiz] = useState(false);
   const [push, setPush] = useState({ can: false, on: false, busy: false });
   const [city, setCity] = useState(DEFAULT_PLACE.city);
@@ -164,6 +166,7 @@ export default function SettingsSheet({ onClose }) {
   useEffect(() => {
     setMounted(true);
     setSoundOn(loadSoundOn());
+    setLite(loadLiteChoice());
     if (pushSupported()) {
       currentSubscription()
         .then((sub) => setPush({ can: true, on: Boolean(sub), busy: false }))
@@ -243,6 +246,9 @@ export default function SettingsSheet({ onClose }) {
     }
   }
 
+  // এখন আসলে চালু আছে কিনা — 'নিজে থেকে' অবস্থায় ফোনটাই ঠিক করে
+  const liteNow = lite === 'on' || (lite === 'auto' && mounted && guessLite());
+
   const place = CITIES.find((c) => c.city === city) || DEFAULT_PLACE;
   // আজকের সময়গুলো দেখিয়ে দিই, যাতে ঠিক শহর বেছেছেন কিনা বোঝা যায়
   const today = timesFor(place.lat, place.lng);
@@ -251,6 +257,13 @@ export default function SettingsSheet({ onClose }) {
     const next = !soundOn;
     setSoundOn(next);
     saveSoundOn(next);
+  }
+
+  // auto → হাতে বদলালে তিনটে অবস্থার মধ্যে ঘোরে
+  function cycleLite() {
+    const next = lite === 'auto' ? (guessLite() ? 'off' : 'on') : lite === 'on' ? 'off' : 'auto';
+    setLite(next);
+    saveLiteChoice(next);
   }
 
   // শিটটা পাতার ভেতরে থাকলে .shell এর স্ট্যাকিং কনটেক্সটে আটকে যায়, আর নিচের
@@ -413,6 +426,23 @@ export default function SettingsSheet({ onClose }) {
           <span>প্রতিটি ট্যাপে শব্দ</span>
           <span className={'switch' + (soundOn ? ' on' : '')} aria-hidden="true">
             <span />
+          </span>
+        </button>
+
+        <div className="section-title">দেখতে কেমন</div>
+        <button type="button" className="toggle-row" onClick={cycleLite}>
+          <span>
+            হালকা মোড
+            <small>
+              {lite === 'auto'
+                ? `ফোন দেখে নিজেই ঠিক করছে — এখন ${liteNow ? 'চালু' : 'বন্ধ'}`
+                : lite === 'on'
+                  ? 'ছায়া, নড়াচড়া আর ভারী আরবি ফন্ট বাদ — ধীর ফোনে ঝরঝরে'
+                  : 'পুরো সাজসজ্জা সহ'}
+            </small>
+          </span>
+          <span className="lite-tag">
+            {lite === 'auto' ? 'নিজে থেকে' : lite === 'on' ? 'চালু' : 'বন্ধ'}
           </span>
         </button>
 

@@ -18,6 +18,9 @@
   --text: #fbeaf2;
   --muted: #c096ae;
 
+  --serif: var(--font-serif), 'Noto Serif Bengali', serif;
+  --arabic: var(--font-arabic), 'Noto Naskh Arabic', 'Amiri', serif;
+
   --radius: 24px;
   --arch: 52% 52% 14px 14px / 62% 62% 14px 14px;
 }
@@ -34,27 +37,31 @@ body {
 
 body {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(120% 60% at 50% -10%, rgba(255, 61, 130, 0.22), transparent 60%),
-    radial-gradient(90% 50% at 100% 100%, rgba(231, 194, 125, 0.08), transparent 65%),
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><g fill='none' stroke='%23ff3d82' stroke-width='1'><path d='M32 3 L61 32 L32 61 L3 32 Z'/><rect x='11.5' y='11.5' width='41' height='41'/><circle cx='32' cy='32' r='6'/></g></svg>");
-  background-attachment: fixed;
-  background-size: auto, auto, 64px 64px;
   color: var(--text);
-  font-family: 'Hind Siliguri', 'Noto Sans Bengali', system-ui, sans-serif;
+  font-family: var(--font-body), 'Noto Sans Bengali', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
+/* সাজসজ্জাটা একটাই স্থির স্তরে।
+   আগে এগুলো body-র গায়ে background-attachment: fixed দিয়ে ছিল — ওতে scroll
+   করলে প্রতিটা ফ্রেমে গোটা পর্দা নতুন করে আঁকতে হতো, কম শক্তির ফোনে সেটাই
+   সবচেয়ে বড় আটকানি। স্থির একটা স্তরে সরিয়ে দিলে একবার আঁকা হয়, তারপর আর নয়। */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: linear-gradient(180deg, rgba(16, 5, 13, 0.82), rgba(16, 5, 13, 0.95));
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(180deg, rgba(16, 5, 13, 0.82), rgba(16, 5, 13, 0.95)),
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 61, 130, 0.22), transparent 60%),
+    radial-gradient(90% 50% at 100% 100%, rgba(231, 194, 125, 0.08), transparent 65%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><g fill='none' stroke='%23ff3d82' stroke-width='1'><path d='M32 3 L61 32 L32 61 L3 32 Z'/><rect x='11.5' y='11.5' width='41' height='41'/><circle cx='32' cy='32' r='6'/></g></svg>");
+  background-size: auto, auto, auto, 64px 64px;
 }
 
 button {
@@ -99,7 +106,7 @@ button {
 
 /* বাংলা নামটাই আসল, উপরে সেরিফে */
 .brand h1 {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 16.5px;
   font-weight: 600;
   line-height: 1.28;
@@ -244,7 +251,7 @@ button {
   display: grid;
   place-items: center;
   color: var(--pink-soft);
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 24px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
 }
@@ -273,7 +280,7 @@ button {
 }
 
 .duo-person .amount {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 700;
   color: var(--pink-soft);
@@ -339,7 +346,7 @@ button {
 }
 
 .card-head .name {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 17px;
   font-weight: 600;
   line-height: 1.2;
@@ -352,7 +359,7 @@ button {
 
 .card-head .arabic {
   margin-left: auto;
-  font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+  font-family: var(--arabic);
   font-size: 20px;
   color: var(--gold);
   opacity: 0.85;
@@ -454,7 +461,7 @@ button {
 /* ---------- মাসের হিসাব ---------- */
 
 .section-title {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 16px;
   font-weight: 600;
   margin: 22px 0 10px;
@@ -493,7 +500,7 @@ button {
 }
 
 .total-box .value {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 700;
   color: var(--pink-soft);
@@ -559,7 +566,7 @@ button {
 
 .month-title strong {
   display: block;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 16.5px;
 }
 
@@ -827,8 +834,7 @@ button {
   bottom: calc(66px + env(safe-area-inset-bottom));
   z-index: 20;
   padding: 10px 16px 8px;
-  background: linear-gradient(180deg, rgba(16, 5, 13, 0.4), rgba(16, 5, 13, 0.97) 45%);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(16, 5, 13, 0.72), rgba(16, 5, 13, 0.99) 45%);
 }
 
 .footbar-inner {
@@ -933,7 +939,7 @@ button {
 
 .toast .amount {
   margin-left: auto;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-weight: 700;
   font-size: 15px;
   color: var(--tone, var(--pink-soft));
@@ -1025,7 +1031,7 @@ button {
 }
 
 .sheet h2 {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 18px;
   margin: 0 0 4px;
 }
@@ -1190,7 +1196,7 @@ button {
 }
 
 .dua .ar {
-  font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+  font-family: var(--arabic);
   font-size: 17px;
   color: var(--gold);
   opacity: 0.9;
@@ -1318,7 +1324,7 @@ button {
 
 .gate-foot .ar {
   display: block;
-  font-family: 'Amiri', serif;
+  font-family: var(--arabic);
   font-size: 16px;
   color: var(--gold);
   margin-bottom: 6px;
@@ -1345,9 +1351,8 @@ button {
   grid-template-columns: repeat(5, 1fr);
   gap: 2px;
   padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-  background: rgba(20, 7, 16, 0.94);
+  background: #140710;
   border-top: 1px solid var(--line);
-  backdrop-filter: blur(12px);
 }
 
 .tab {
@@ -1386,7 +1391,7 @@ button {
 }
 
 .pagehead h1 {
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 600;
   margin: 0;
@@ -1417,7 +1422,7 @@ button {
 
 .pair-code span {
   display: block;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -1504,7 +1509,7 @@ button {
 
 .qp-row b {
   display: block;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 20px;
   color: var(--pink-soft);
 }
@@ -1585,7 +1590,7 @@ button {
 }
 
 .surah-ar {
-  font-family: 'Amiri', serif;
+  font-family: var(--arabic);
   font-size: 17px;
   color: var(--gold);
   flex: none;
@@ -1674,7 +1679,7 @@ button {
 
 .ayah-ar {
   margin: 0 0 10px;
-  font-family: 'Amiri', serif;
+  font-family: var(--arabic);
   font-size: 22px;
   line-height: 2.1;
   text-align: right;
@@ -1834,7 +1839,7 @@ button {
 
 .quiz-done b {
   display: block;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 17px;
   margin: 6px 0 4px;
 }
@@ -1978,14 +1983,14 @@ button {
 
 .dash-side span {
   display: block;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 5px;
 }
 
 .dash-side span small {
-  font-family: 'Hind Siliguri', sans-serif;
+  font-family: var(--font-body), sans-serif;
   font-size: 10.5px;
   font-weight: 400;
   color: var(--muted);
@@ -2174,7 +2179,7 @@ button {
 /* ---------- দোয়া ও আমলের শ্রেণি ---------- */
 
 .cat-count {
-  font-family: 'Hind Siliguri', sans-serif;
+  font-family: var(--font-body), sans-serif;
   font-size: 11.5px;
   font-weight: 400;
   color: var(--muted);
@@ -2265,7 +2270,7 @@ button {
 .group-name {
   flex: 1;
   min-width: 0;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 15.5px;
   font-weight: 600;
 }
@@ -2350,7 +2355,7 @@ button {
   display: grid;
   place-items: center;
   color: var(--pink-soft);
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 30px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
   animation: pre-rise 2.6s ease-in-out infinite;
@@ -2395,7 +2400,7 @@ button {
 
 .pre-name h1 {
   margin: 0;
-  font-family: 'Noto Serif Bengali', serif;
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.2px;
@@ -2463,4 +2468,59 @@ button {
   .pre-stage {
     animation: none;
   }
+}
+
+/* ---------- পর্দার বাইরেরটা আঁকার দরকার নেই ---------- */
+/* ব্রাউজার নিজেই বুঝে নেয় কোনটা এখন চোখে পড়ছে না, আর ওটুকু আঁকা বাদ দেয়।
+   লম্বা সুরায় এতেই বেশিরভাগ কাজ বেঁচে যায়। */
+
+.ayah {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
+.item-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+
+.ayah-more {
+  margin-top: 4px;
+}
+
+/* ---------- হালকা মোড ---------- */
+/* কম শক্তির ফোনে নিজে থেকেই চালু হয়, সেটিংসে হাতেও বদলানো যায়। */
+
+html.lite *,
+html.lite *::before,
+html.lite *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* ভারী আরবি ফন্টটা (~১৯০ কিলোবাইট) নামেই না — ফোনের নিজের আরবি ফন্ট চলে */
+html.lite {
+  --arabic: 'Noto Naskh Arabic', 'Traditional Arabic', serif;
+}
+
+/* পটভূমির নকশা আর আলোগুলো বাদ, শুধু সমতল রং */
+html.lite body::before {
+  background-image: linear-gradient(180deg, #1c0817, #10050d);
+}
+
+html.lite .pre-halo {
+  display: none;
+}
+
+.lite-tag {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--pink-soft);
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
 }

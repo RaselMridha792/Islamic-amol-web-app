@@ -5,7 +5,7 @@
 // ওখান দিয়ে আসে, আর ওগুলো সবসময় টাটকা লাগে। জমা থাকে শুধু সেসব ফাইল যেগুলো
 // সবার জন্য এক আর বদলায় না।
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = 'deen-shell-' + VERSION;   // পাতা, JS, CSS
 const QURAN = 'deen-quran-' + VERSION;   // কুরআনের লেখা
 
