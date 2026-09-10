@@ -1380,27 +1380,77 @@ button {
 
 .pagehead {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+
+/* মিহরাবের খিলান — নামের পাশে ছোট করে */
+.head-arch {
+  flex: none;
+  display: block;
+  width: 26px;
+  height: 34px;
+  color: var(--gold);
+  opacity: 0.85;
+}
+
+.head-arch svg {
+  width: 100%;
+  height: 100%;
 }
 
 .pagehead-text {
+  flex: 1;
   min-width: 0;
 }
 
 .pagehead h1 {
   font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   margin: 0;
+  background: linear-gradient(96deg, var(--gold) 8%, var(--text) 55%, var(--pink-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .pagehead p {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* মুসহাফের পাতার মতো ভাগরেখা — দুই পাশে সরু টান, মাঝে রুবউল হিজব */
+.head-rule {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: var(--gold);
+}
+
+.head-rule i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line-strong) 45%, transparent);
+}
+
+.head-rule span {
+  flex: none;
+  font-family: var(--arabic);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* হালকা মোডে লেখার উপর gradient বাদ — কম শক্তির ফোনে ওটাও খরচ */
+html.lite .pagehead h1 {
+  background: none;
+  color: var(--text);
 }
 
 /* ================= জোড়া বাঁধা ================= */
@@ -2546,4 +2596,229 @@ html.lite .pre-halo {
   border-radius: 20px;
   background: var(--panel-2);
   border: 1px solid var(--line);
+}
+
+/* ---------- সুরা / পারা বেছে নেওয়া ---------- */
+
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.seg-btn {
+  padding: 9px 6px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.seg-btn.on {
+  background: rgba(255, 61, 130, 0.16);
+  color: var(--text);
+}
+
+/* ---------- পারার তালিকা ---------- */
+
+.juz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.juz {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.juz.open {
+  border-color: var(--line-strong);
+}
+
+.juz.done {
+  border-color: rgba(53, 199, 154, 0.32);
+}
+
+.juz-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 13px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text);
+}
+
+.juz-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--arch);
+  border: 1px solid var(--line-strong);
+  color: var(--pink-soft);
+  font-family: var(--serif);
+  font-size: 13.5px;
+}
+
+.juz-num.done {
+  background: var(--good);
+  border-color: transparent;
+  color: #06231a;
+}
+
+.juz-mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.juz-mid b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.juz-mid small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.juz-bar {
+  display: block;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.juz-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--pink), var(--gold));
+}
+
+.juz-ar {
+  flex: none;
+  max-width: 34%;
+  font-family: var(--arabic);
+  font-size: 15px;
+  color: var(--gold);
+  text-align: right;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.juz-body {
+  padding: 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.juz-part {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.juz-part b {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.juz-part small {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ---------- সুরার মাথায় পারার কথা ---------- */
+
+.juz-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+
+.juz-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1px solid var(--line-strong);
+  background: rgba(231, 194, 125, 0.08);
+  color: var(--gold);
+  font-family: var(--serif);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.juz-chip small {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.juz-chip.soft {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--pink-soft);
+}
+
+.surah-juz {
+  color: var(--gold) !important;
+  opacity: 0.75;
+}
+
+/* সুরার ভেতরে যেখানে নতুন পারা শুরু */
+.juz-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px -4px 12px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  background: rgba(231, 194, 125, 0.09);
+  border: 1px dashed rgba(231, 194, 125, 0.35);
+  color: var(--gold);
+  font-family: var(--serif);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.juz-mark span {
+  font-family: var(--arabic);
+  font-size: 16px;
 }

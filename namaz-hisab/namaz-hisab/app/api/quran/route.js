@@ -16,12 +16,15 @@ export async function quranSummary(sql, userId) {
   const byJuz = new Map(rows.map((r) => [Number(r.juz), r.n]));
   let total = 0;
   let doneJuz = 0;
-  JUZ_RANGE.forEach((j) => {
+  // পারার তালিকায় প্রতিটার নিজের হিসাব দেখাতে হয়, তাই ত্রিশটাই পাঠাই।
+  // আয়াত লেখার সময়ই পারার নম্বর বসানো থাকে, তাই এটা আন্দাজ নয়।
+  const juz = JUZ_RANGE.map((j) => {
     const n = byJuz.get(j.juz) || 0;
     total += n;
     if (n >= j.count) doneJuz += 1;
+    return n;
   });
-  return { ayahs: total, juzDone: doneJuz, juzTotal: JUZ_RANGE.length };
+  return { ayahs: total, juzDone: doneJuz, juzTotal: JUZ_RANGE.length, juz };
 }
 
 export async function GET(req) {

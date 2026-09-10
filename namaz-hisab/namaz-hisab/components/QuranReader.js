@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
 import { ChevronIcon, CheckIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
-import { SURAHS } from '../lib/quranMeta';
+import { JUZ_NAMES, JUZ_RANGE, SURAHS, juzBreaksIn, juzParts, juzSpanOf } from '../lib/quranMeta';
 import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
 import { QARIS, ayahAudioUrl, loadQari, saveQari } from '../lib/recite';
 import { bnNum } from '../lib/store';
 import { getQuran, markQuran } from '../lib/cloud';
 
-const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30 };
+const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30, juz: [] };
 
 // একবারে কয়টা আয়াত পাতায় বসবে। বাকারায় ২৮৬টা — সব একসাথে বসালে কম শক্তির
 // ফোনে পাতাটা খুলতেই দেরি হয়ে যায়।
@@ -57,7 +57,8 @@ function SurahList({ onOpen, readBySurah }) {
         s.tr.toLowerCase().includes(term) ||
         s.bn.toLowerCase().includes(term) ||
         String(s.id) === term ||
-        s.ar.includes(q.trim())
+        s.ar.includes(q.trim()) ||
+        JUZ_NAMES[juzSpanOf(s.id).from - 1][0].includes(q.trim())
     );
   }, [term, q]);
 
@@ -76,6 +77,7 @@ function SurahList({ onOpen, readBySurah }) {
         {list.map((s) => {
           const read = readBySurah[s.id] || 0;
           const done = read >= s.ayahs;
+          const sp = juzSpanOf(s.id);
           return (
             <button key={s.id} type="button" className="surah-row" onClick={() => onOpen(s.id)}>
               <span className={'surah-num' + (done ? ' done' : '')}>
@@ -86,6 +88,9 @@ function SurahList({ onOpen, readBySurah }) {
                 <small>
                   {s.bn} · {bnNum(s.ayahs)} আয়াত · {s.type === 'meccan' ? 'মাক্কি' : 'মাদানি'}
                 </small>
+                <small className="surah-juz">
+                  পারা {sp.from === sp.to ? bnNum(sp.from) : `${bnNum(sp.from)}–${bnNum(sp.to)}`}
+                </small>
               </span>
               <span className="surah-ar">{s.ar}</span>
             </button>
@@ -94,6 +99,65 @@ function SurahList({ onOpen, readBySurah }) {
         {list.length === 0 ? <div className="empty-note">এই নামে কোনো সুরা পাওয়া গেল না।</div> : null}
       </div>
     </>
+  );
+}
+
+/* ---------- পারার তালিকা ---------- */
+//
+// সুরা ধরে খোঁজা আর পারা ধরে খোঁজা — দুটো আলাদা অভ্যাস। যিনি রোজ এক পারা
+// পড়েন তিনি "৫ নম্বর পারা" খোঁজেন, সুরার নাম নয়। পারা সুরার মাঝখানে শুরু
+// বা শেষ হতে পারে, তাই কোন আয়াত থেকে কোন আয়াত সেটাও লিখে দিই।
+
+function JuzList({ onOpen, summary }) {
+  const [open, setOpen] = useState(null);
+
+  return (
+    <div className="juz-list">
+      {JUZ_RANGE.map((r, i) => {
+        const n = i + 1;
+        const [bn, ar] = JUZ_NAMES[i];
+        const read = Math.min(summary.juz?.[i] || 0, r.count);
+        const done = read >= r.count;
+        const parts = juzParts(n);
+        const isOpen = open === n;
+
+        return (
+          <section key={n} className={'juz' + (isOpen ? ' open' : '') + (done ? ' done' : '')}>
+            <button type="button" className="juz-head" onClick={() => setOpen(isOpen ? null : n)}
+                    aria-expanded={isOpen}>
+              <span className={'juz-num' + (done ? ' done' : '')}>
+                {done ? <CheckIcon size={13} /> : bnNum(n)}
+              </span>
+              <span className="juz-mid">
+                <b>{bn}</b>
+                <small>
+                  পারা {bnNum(n)} · {bnNum(r.count)} আয়াত · {bnNum(read)} পড়া
+                </small>
+                <i className="juz-bar">
+                  <i style={{ width: Math.round((read / r.count) * 100) + '%' }} />
+                </i>
+              </span>
+              <span className="juz-ar">{ar}</span>
+            </button>
+
+            {isOpen ? (
+              <div className="juz-body">
+                {parts.map((x) => (
+                  <button key={x.id} type="button" className="juz-part" onClick={() => onOpen(x.id)}>
+                    <b>{surahBn(x.id)}</b>
+                    <small>
+                      {x.whole
+                        ? `পুরো সুরা · ${bnNum(SURAHS[x.id - 1].ayahs)} আয়াত`
+                        : `আয়াত ${bnNum(x.from)}–${bnNum(x.to)}`}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -220,6 +284,11 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
 
   const visible = data ? data.verses.slice(0, shown) : [];
 
+  // এই সুরাটা কোন পারায়, আর ভেতরে কোথায় নতুন পারা শুরু হয়
+  const span = juzSpanOf(id);
+  const breaks = juzBreaksIn(id);
+  const breakAt = new Map(breaks.map((b) => [b.ayah, b.juz]));
+
   return (
     <>
       <div className="surah-head">
@@ -229,10 +298,25 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
         <div className="month-title">
           <strong>{surahBn(id)}</strong>
           <span>
-            {meta.bn} · {bnNum(meta.ayahs)} আয়াত
+            {meta.bn} · {bnNum(meta.ayahs)} আয়াত · {meta.type === 'meccan' ? 'মাক্কি' : 'মাদানি'}
           </span>
         </div>
         <span className="surah-ar big">{meta.ar}</span>
+      </div>
+
+      <div className="juz-strip">
+        <span className="juz-chip">
+          {span.from === span.to
+            ? `পারা ${bnNum(span.from)}`
+            : `পারা ${bnNum(span.from)}–${bnNum(span.to)}`}
+          <small>{JUZ_NAMES[span.from - 1][0]}</small>
+        </span>
+        {breaks.map((b) => (
+          <span key={b.juz} className="juz-chip soft">
+            পারা {bnNum(b.juz)}
+            <small>আয়াত {bnNum(b.ayah)} থেকে</small>
+          </span>
+        ))}
       </div>
 
       <button
@@ -254,8 +338,15 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
         <div className="ayah-list">
           {visible.map((v) => {
             const on = readSet.has(v.id);
+            const starts = breakAt.get(v.id);
             return (
               <div key={v.id} className={'ayah' + (on ? ' read' : '')}>
+                {starts ? (
+                  <div className="juz-mark">
+                    <span>۞</span>
+                    পারা {bnNum(starts)} — {JUZ_NAMES[starts - 1][0]} শুরু
+                  </div>
+                ) : null}
                 <div className="ayah-top">
                   <span className="ayah-no">{bnNum(v.id)}</span>
                   <div className="ayah-acts">
@@ -323,6 +414,7 @@ export default function QuranReader() {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [qari, setQari] = useState(QARIS[0].id);
   const [open, setOpen] = useState(null);
+  const [view, setView] = useState('surah');
   const [readAyahs, setReadAyahs] = useState([]);
   const [readBySurah, setReadBySurah] = useState({});
   const [busy, setBusy] = useState(false);
@@ -400,6 +492,19 @@ export default function QuranReader() {
       <QariPicker qari={qari} onChange={changeQari} />
       {msg ? <div className="auth-error">{msg}</div> : null}
 
+      {!open ? (
+        <div className="seg">
+          <button type="button" className={'seg-btn' + (view === 'surah' ? ' on' : '')}
+                  onClick={() => setView('surah')}>
+            সুরা ({bnNum(114)})
+          </button>
+          <button type="button" className={'seg-btn' + (view === 'juz' ? ' on' : '')}
+                  onClick={() => setView('juz')}>
+            পারা ({bnNum(30)})
+          </button>
+        </div>
+      ) : null}
+
       {open ? (
         <SurahView
           id={open}
@@ -415,6 +520,8 @@ export default function QuranReader() {
             )
           }
         />
+      ) : view === 'juz' ? (
+        <JuzList onOpen={setOpen} summary={summary} />
       ) : (
         <SurahList onOpen={setOpen} readBySurah={readBySurah} />
       )}
