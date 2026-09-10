@@ -13,6 +13,16 @@ export async function quranSummary(sql, userId) {
   const rows = await sql`
     select juz, count(*)::int as n from nh_quran where user_id = ${userId} group by juz
   `;
+  // সুরার তালিকায় কোনটা শেষ হয়েছে সেটা দেখাতে হয়। আগে কেবল যে সুরাটা খোলা
+  // হয়েছে তারটাই জানা যেত, তাই বেশিরভাগ সুরাই না-পড়া দেখাত। একটা সস্তা
+  // গোনাতেই সবগুলোর হিসাব আসে।
+  const per = await sql`
+    select surah, count(*)::int as n from nh_quran where user_id = ${userId} group by surah
+  `;
+  const bySurah = {};
+  per.forEach((r) => {
+    bySurah[Number(r.surah)] = r.n;
+  });
   const byJuz = new Map(rows.map((r) => [Number(r.juz), r.n]));
   let total = 0;
   let doneJuz = 0;
@@ -24,17 +34,35 @@ export async function quranSummary(sql, userId) {
     if (n >= j.count) doneJuz += 1;
     return n;
   });
-  return { ayahs: total, juzDone: doneJuz, juzTotal: JUZ_RANGE.length, juz };
+  return { ayahs: total, juzDone: doneJuz, juzTotal: JUZ_RANGE.length, juz, bySurah };
 }
 
 export async function GET(req) {
   const gate = await requireUser(req);
   if (gate.error) return gate.error;
-  const surah = Number(new URL(req.url).searchParams.get('surah') || 0);
+  const q = new URL(req.url).searchParams;
+  const surah = Number(q.get('surah') || 0);
+  const juz = Number(q.get('juz') || 0);
 
   try {
     const sql = db();
     const summary = await quranSummary(sql, gate.user.id);
+
+    // পারা ধরে পড়ার সময় একটা পারায় ৩৭টা সুরা পর্যন্ত থাকতে পারে। সুরা ধরে
+    // ৩৭ বার জিজ্ঞেস করা অর্থহীন — আয়াত লেখার সময়ই পারার নম্বর বসানো আছে,
+    // তাই একটা প্রশ্নেই সব চলে আসে।
+    if (juz >= 1 && juz <= 30) {
+      const rows = await sql`
+        select surah, ayah from nh_quran where user_id = ${gate.user.id} and juz = ${juz}
+      `;
+      const marks = {};
+      rows.forEach((r) => {
+        const k = Number(r.surah);
+        (marks[k] = marks[k] || []).push(Number(r.ayah));
+      });
+      return NextResponse.json({ summary, juz, marks });
+    }
+
     let ayahs = [];
     if (surah >= 1 && surah <= 114) {
       const rows = await sql`

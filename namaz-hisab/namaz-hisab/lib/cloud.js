@@ -103,6 +103,7 @@ export const unpair = () => call('/api/pair', { method: 'POST', body: JSON.strin
 /* ---------- কুরআন ---------- */
 
 export const getQuran = (surah) => call('/api/quran' + (surah ? '?surah=' + surah : ''));
+export const getQuranJuz = (juz) => call('/api/quran?juz=' + juz);
 export const markQuran = (surah, ayahs, read = true) =>
   call('/api/quran', { method: 'POST', body: JSON.stringify({ surah, ayahs, read }) });
 

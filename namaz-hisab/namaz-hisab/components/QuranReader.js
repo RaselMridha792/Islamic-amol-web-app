@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
+import JuzReader from './JuzReader';
 import { BookIcon, ChevronIcon, CheckIcon, LayersIcon, ListIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { JUZ_NAMES, JUZ_RANGE, SURAHS, juzBreaksIn, juzParts, juzSpanOf } from '../lib/quranMeta';
 import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
 import { QARIS, ayahAudioUrl, loadQari, saveQari } from '../lib/recite';
 import { bnNum } from '../lib/store';
-import { getQuran, markQuran } from '../lib/cloud';
+import { getQuran, getQuranJuz, markQuran } from '../lib/cloud';
 
-const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30, juz: [] };
+const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30, juz: [], bySurah: {} };
 
 // একবারে কয়টা আয়াত পাতায় বসবে। বাকারায় ২৮৬টা — সব একসাথে বসালে কম শক্তির
 // ফোনে পাতাটা খুলতেই দেরি হয়ে যায়।
@@ -108,7 +109,7 @@ function SurahList({ onOpen, readBySurah }) {
 // পড়েন তিনি "৫ নম্বর পারা" খোঁজেন, সুরার নাম নয়। পারা সুরার মাঝখানে শুরু
 // বা শেষ হতে পারে, তাই কোন আয়াত থেকে কোন আয়াত সেটাও লিখে দিই।
 
-function JuzList({ onOpen, summary }) {
+function JuzList({ onOpen, onRead, summary }) {
   const [open, setOpen] = useState(null);
 
   return (
@@ -123,8 +124,8 @@ function JuzList({ onOpen, summary }) {
 
         return (
           <section key={n} className={'juz' + (isOpen ? ' open' : '') + (done ? ' done' : '')}>
-            <button type="button" className="juz-head" onClick={() => setOpen(isOpen ? null : n)}
-                    aria-expanded={isOpen}>
+            <button type="button" className="juz-head" onClick={() => onRead(n)}
+                    aria-label={'পারা ' + bnNum(n) + ' পড়ুন'}>
               <span className={'juz-num' + (done ? ' done' : '')}>
                 {done ? <CheckIcon size={13} /> : bnNum(n)}
               </span>
@@ -138,6 +139,12 @@ function JuzList({ onOpen, summary }) {
                 </i>
               </span>
               <span className="juz-ar">{ar}</span>
+            </button>
+
+            <button type="button" className="juz-peek" onClick={() => setOpen(isOpen ? null : n)}
+                    aria-expanded={isOpen}>
+              {isOpen ? 'সুরার তালিকা লুকান' : 'কোন কোন সুরা আছে'}
+              <ChevronIcon dir={isOpen ? 'left' : 'right'} size={14} />
             </button>
 
             {isOpen ? (
@@ -476,6 +483,8 @@ export default function QuranReader() {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [qari, setQari] = useState(QARIS[0].id);
   const [open, setOpen] = useState(null);
+  const [openJuz, setOpenJuz] = useState(null);
+  const [juzMarks, setJuzMarks] = useState({});
   const [view, setView] = useState('surah');
   const [readAyahs, setReadAyahs] = useState([]);
   const [readBySurah, setReadBySurah] = useState({});
@@ -483,14 +492,21 @@ export default function QuranReader() {
   const [msg, setMsg] = useState('');
   const openRef = useRef(null);
 
+  // সারাংশে সুরাভিত্তিক গোনাও থাকে, তাই তালিকায় সাথে সাথেই বোঝা যায়
+  // কোনটা শেষ — সুরাটা একবার না খুললেও।
+  const take = useCallback((res) => {
+    const sum = res && res.summary ? res.summary : EMPTY_SUMMARY;
+    setSummary(sum);
+    if (sum.bySurah) setReadBySurah(sum.bySurah);
+  }, []);
+
   const loadTop = useCallback(async () => {
     try {
-      const res = await getQuran();
-      setSummary(res.summary || EMPTY_SUMMARY);
+      take(await getQuran());
     } catch (err) {
       setMsg('পড়ার হিসাব আনা গেল না');
     }
-  }, []);
+  }, [take]);
 
   useEffect(() => {
     loadTop();
@@ -505,7 +521,14 @@ export default function QuranReader() {
   // পরের সুরায় গেলে পাতার শেষ থেকে যাচ্ছি — উপরে না ফিরলে নতুন সুরাটা
   // মাঝখান থেকে শুরু হয়েছে মনে হবে
   function goSurah(next) {
+    setOpenJuz(null);
     setOpen(next);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  function goJuz(next) {
+    setOpen(null);
+    setOpenJuz(next);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
@@ -522,13 +545,85 @@ export default function QuranReader() {
       .then((res) => {
         if (!alive || openRef.current !== open) return;
         setReadAyahs(res.ayahs || []);
-        setSummary(res.summary || EMPTY_SUMMARY);
+        take(res);
       })
       .catch(() => setMsg('টিকগুলো আনা গেল না'));
     return () => {
       alive = false;
     };
   }, [open]);
+
+  // পারা খুললে ওই পারার সব টিক একসাথে — সুরা ধরে ৩৭ বার নয়
+  useEffect(() => {
+    if (!openJuz) return undefined;
+    let alive = true;
+    setJuzMarks({});
+    getQuranJuz(openJuz)
+      .then((res) => {
+        if (!alive) return;
+        setJuzMarks(res.marks || {});
+        take(res);
+      })
+      .catch(() => setMsg('টিকগুলো আনা গেল না'));
+    return () => {
+      alive = false;
+    };
+  }, [openJuz]);
+
+  // পারার পাতা থেকে টিক — সুরাটাও বলে দিতে হয়, কারণ একই পাতায় অনেক সুরা
+  const applyJuz = useCallback(
+    async (surah, ayahs, read) => {
+      if (!ayahs.length) return;
+      setBusy(true);
+      setMsg('');
+      const before = juzMarks;
+      const set = new Set(before[surah] || []);
+      ayahs.forEach((a) => (read ? set.add(a) : set.delete(a)));
+      setJuzMarks({ ...before, [surah]: Array.from(set) });
+      try {
+        take(await markQuran(surah, ayahs, read));
+      } catch (err) {
+        setJuzMarks(before);
+        setMsg('হিসাবটা সার্ভারে রাখা গেল না — টিকটা ফিরিয়ে নেওয়া হলো, আবার চেষ্টা করুন');
+      }
+      setBusy(false);
+    },
+    [juzMarks, take]
+  );
+
+  // পুরো পারা এক চাপে। একেকটা সুরার জন্য একেকটা অনুরোধ, একটাও যেন বাদ না যায়।
+  const applyWholeJuz = useCallback(
+    async (parts, read) => {
+      setBusy(true);
+      setMsg('');
+      const before = juzMarks;
+      const next = { ...before };
+      parts.forEach((x) => {
+        const set = new Set(read ? [] : next[x.id] || []);
+        if (read) {
+          (next[x.id] || []).forEach((a) => set.add(a));
+          for (let a = x.from; a <= x.to; a += 1) set.add(a);
+        } else {
+          for (let a = x.from; a <= x.to; a += 1) set.delete(a);
+        }
+        next[x.id] = Array.from(set);
+      });
+      setJuzMarks(next);
+      try {
+        for (const x of parts) {
+          const list = [];
+          for (let a = x.from; a <= x.to; a += 1) list.push(a);
+          // eslint-disable-next-line no-await-in-loop
+          take(await markQuran(x.id, list, read));
+        }
+      } catch (err) {
+        setJuzMarks(before);
+        setMsg('হিসাবটা সার্ভারে রাখা গেল না — টিকটা ফিরিয়ে নেওয়া হলো, আবার চেষ্টা করুন');
+      }
+      setBusy(false);
+    },
+    [juzMarks, take]
+  );
 
   const apply = useCallback(
     async (ayahs, read) => {
@@ -546,16 +641,14 @@ export default function QuranReader() {
       setReadAyahs(after);
 
       try {
-        const res = await markQuran(open, ayahs, read);
-        setSummary(res.summary || EMPTY_SUMMARY);
-        setReadBySurah((m) => ({ ...m, [open]: after.length }));
+        take(await markQuran(open, ayahs, read));
       } catch (err) {
         setReadAyahs(before);
         setMsg('হিসাবটা সার্ভারে রাখা গেল না — টিকটা ফিরিয়ে নেওয়া হলো, আবার চেষ্টা করুন');
       }
       setBusy(false);
     },
-    [open, readAyahs]
+    [open, readAyahs, take]
   );
 
   return (
@@ -565,7 +658,7 @@ export default function QuranReader() {
       <QariPicker qari={qari} onChange={changeQari} />
       {msg ? <div className="auth-error">{msg}</div> : null}
 
-      {!open ? (
+      {!open && !openJuz ? (
         <div className="pickbar" role="tablist" aria-label="কীভাবে দেখবেন">
           <button
             type="button"
@@ -592,7 +685,18 @@ export default function QuranReader() {
         </div>
       ) : null}
 
-      {open ? (
+      {openJuz ? (
+        <JuzReader
+          juz={openJuz}
+          qari={qari}
+          marks={juzMarks}
+          busy={busy}
+          onBack={() => setOpenJuz(null)}
+          onGo={goJuz}
+          onToggle={(surah, ayah, read) => applyJuz(surah, [ayah], read)}
+          onWholeJuz={applyWholeJuz}
+        />
+      ) : open ? (
         <SurahView
           id={open}
           qari={qari}
@@ -609,7 +713,7 @@ export default function QuranReader() {
           }
         />
       ) : view === 'juz' ? (
-        <JuzList onOpen={goSurah} summary={summary} />
+        <JuzList onOpen={goSurah} onRead={goJuz} summary={summary} />
       ) : (
         <SurahList onOpen={goSurah} readBySurah={readBySurah} />
       )}
