@@ -223,3 +223,12 @@ export function LayersIcon({ size = 18 }) {
     </svg>
   );
 }
+
+// তালিকায় ফেরা
+export function ListIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+    </svg>
+  );
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
-import { BookIcon, ChevronIcon, CheckIcon, LayersIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
+import { BookIcon, ChevronIcon, CheckIcon, LayersIcon, ListIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { JUZ_NAMES, JUZ_RANGE, SURAHS, juzBreaksIn, juzParts, juzSpanOf } from '../lib/quranMeta';
 import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
@@ -163,7 +163,7 @@ function JuzList({ onOpen, summary }) {
 
 /* ---------- এক সুরা পড়া ---------- */
 
-function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }) {
+function SurahView({ id, qari, onBack, onGo, readAyahs, onToggle, onWholeSurah, busy }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [playing, setPlaying] = useState(null);   // কোন আয়াত বাজছে
@@ -284,6 +284,10 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
 
   const visible = data ? data.verses.slice(0, shown) : [];
 
+  // আগের-পরের সুরা। ১ এর আগে কিছু নেই, ১১৪ এর পরেও নেই।
+  const prev = id > 1 ? SURAHS[id - 2] : null;
+  const next = id < 114 ? SURAHS[id] : null;
+
   // এই সুরাটা কোন পারায়, আর ভেতরে কোথায় নতুন পারা শুরু হয়
   const span = juzSpanOf(id);
   const breaks = juzBreaksIn(id);
@@ -293,6 +297,15 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
     <>
       <div className="surah-head">
         <button type="button" className="nav" onClick={onBack} aria-label="তালিকায় ফিরুন">
+          <ListIcon size={17} />
+        </button>
+        <button
+          type="button"
+          className="nav"
+          disabled={!prev}
+          onClick={() => prev && onGo(prev.id)}
+          aria-label={prev ? 'আগের সুরা — ' + surahBn(prev.id) : 'এটাই প্রথম সুরা'}
+        >
           <ChevronIcon dir="left" />
         </button>
         <div className="month-title">
@@ -301,7 +314,15 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
             {meta.bn} · {bnNum(meta.ayahs)} আয়াত · {meta.type === 'meccan' ? 'মাক্কি' : 'মাদানি'}
           </span>
         </div>
-        <span className="surah-ar big">{meta.ar}</span>
+        <button
+          type="button"
+          className="nav"
+          disabled={!next}
+          onClick={() => next && onGo(next.id)}
+          aria-label={next ? 'পরের সুরা — ' + surahBn(next.id) : 'এটাই শেষ সুরা'}
+        >
+          <ChevronIcon dir="right" />
+        </button>
       </div>
 
       <div className="juz-strip">
@@ -391,6 +412,47 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
           ) : null}
         </div>
       ) : null}
+
+      {/* সুরা শেষ। তালিকায় ফিরে গিয়ে আবার খোঁজার দরকার নেই — পরেরটা এখানেই। */}
+      {data && shown >= data.verses.length ? (
+        <>
+          <div className="surah-end" aria-hidden="true">
+            <i />
+            <span>۞</span>
+            <i />
+          </div>
+
+          <div className="surah-pager">
+            {prev ? (
+              <button type="button" className="pager" onClick={() => onGo(prev.id)}>
+                <ChevronIcon dir="left" size={16} />
+                <span>
+                  <small>আগের সুরা</small>
+                  <b>{surahBn(prev.id)}</b>
+                </span>
+              </button>
+            ) : (
+              <span className="pager empty">এটাই প্রথম সুরা</span>
+            )}
+
+            {next ? (
+              <button type="button" className="pager next" onClick={() => onGo(next.id)}>
+                <span>
+                  <small>পরের সুরা</small>
+                  <b>{surahBn(next.id)}</b>
+                </span>
+                <ChevronIcon dir="right" size={16} />
+              </button>
+            ) : (
+              <span className="pager empty">কুরআন এখানেই শেষ</span>
+            )}
+          </div>
+
+          <button type="button" className="btn wide" onClick={onBack}>
+            সুরার তালিকায় ফিরুন
+          </button>
+        </>
+      ) : null}
     </>
   );
 }
@@ -440,10 +502,21 @@ export default function QuranReader() {
     saveQari(id);
   }
 
+  // পরের সুরায় গেলে পাতার শেষ থেকে যাচ্ছি — উপরে না ফিরলে নতুন সুরাটা
+  // মাঝখান থেকে শুরু হয়েছে মনে হবে
+  function goSurah(next) {
+    setOpen(next);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
   // সুরা খুললে ওই সুরার টিকগুলো আনি
   useEffect(() => {
     if (!open) return;
     openRef.current = open;
+    // আগের সুরার টিকগুলো সাথে সাথেই ফেলে দিই। নইলে পরের সুরায় গেলে সার্ভারের
+    // উত্তর আসার আগ পর্যন্ত ওখানকার ১-২-৩ নম্বর আয়াত পড়া দেখাবে — আগে
+    // তালিকা হয়ে যেতে হতো বলে চোখে পড়ত না, এখন প্রতিবারই পড়বে।
+    setReadAyahs([]);
     let alive = true;
     getQuran(open)
       .then((res) => {
@@ -524,6 +597,7 @@ export default function QuranReader() {
           id={open}
           qari={qari}
           onBack={() => setOpen(null)}
+          onGo={goSurah}
           readAyahs={readAyahs}
           busy={busy}
           onToggle={(ayah, read) => apply([ayah], read)}
@@ -535,9 +609,9 @@ export default function QuranReader() {
           }
         />
       ) : view === 'juz' ? (
-        <JuzList onOpen={setOpen} summary={summary} />
+        <JuzList onOpen={goSurah} summary={summary} />
       ) : (
-        <SurahList onOpen={setOpen} readBySurah={readBySurah} />
+        <SurahList onOpen={goSurah} readBySurah={readBySurah} />
       )}
     </main>
   );

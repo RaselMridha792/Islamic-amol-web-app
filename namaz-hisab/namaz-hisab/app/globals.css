@@ -2914,3 +2914,96 @@ html.lite .pre-halo {
     width: 2.5px;
   }
 }
+
+/* ---------- সুরা শেষ, পরেরটায় যাওয়া ---------- */
+/*
+   আগে প্রতিটা সুরা পড়ার পর তালিকায় ফিরে গিয়ে আবার পরেরটা খুঁজতে হতো।
+   পড়া তো একটার পর একটা এগোয়, তাই পরেরটা এখানেই থাকুক।
+*/
+
+.surah-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--gold);
+}
+
+.surah-end i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line-strong) 45%, transparent);
+}
+
+.surah-end span {
+  flex: none;
+  font-family: var(--arabic);
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.surah-pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+}
+
+.pager.next {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.pager > span {
+  min-width: 0;
+}
+
+.pager small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.pager b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pager svg {
+  flex: none;
+  color: var(--pink-soft);
+}
+
+/* কুরআনের দুই মাথায় একদিকে যাওয়ার জায়গা থাকে না */
+.pager.empty {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.surah-head .nav:disabled {
+  opacity: 0.3;
+}
