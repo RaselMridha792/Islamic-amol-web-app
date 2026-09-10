@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from './AuthProvider';
 import PasswordField from './PasswordField';
+import Preloader from './Preloader';
 import {
   BookIcon,
   CrescentIcon,
@@ -170,15 +171,7 @@ function BottomNav() {
 export default function AppShell({ children }) {
   const { loading, user } = useAuth();
 
-  if (loading) {
-    return (
-      <main className="shell">
-        <div className="empty-note" style={{ marginTop: 60 }}>
-          খাতা খোলা হচ্ছে…
-        </div>
-      </main>
-    );
-  }
+  if (loading) return <Preloader />;
 
   if (!user) return <Gate />;
 

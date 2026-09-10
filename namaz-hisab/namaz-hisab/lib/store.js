@@ -145,6 +145,16 @@ export function saveMeta(meta) {
 
 const KEY_PARTNER = 'namaz-hisab:partner:v1';
 const KEY_PHOTO = 'namaz-hisab:photo:v1';
+const KEY_ME = 'namaz-hisab:me:v1';
+
+// অ্যাপ খোলার পর্দায় দুজনের মুখ দেখাতে হলে নামটাও লাগে, শুধু ছবিতে হয় না
+export function loadMeCache() {
+  return read(KEY_ME, null);
+}
+
+export function saveMeCache(me) {
+  write(KEY_ME, me || null);
+}
 
 export function loadPartnerCache() {
   return read(KEY_PARTNER, null);
@@ -166,4 +176,5 @@ export function savePhotoCache(photo) {
 export function clearPersonCache() {
   write(KEY_PARTNER, null);
   write(KEY_PHOTO, '');
+  write(KEY_ME, null);
 }

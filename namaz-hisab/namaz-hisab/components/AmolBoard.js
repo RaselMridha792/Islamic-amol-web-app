@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import PageHead from './PageHead';
-import { CheckIcon, PlayIcon, PauseIcon } from './Icons';
+import { CheckIcon, PlayIcon, PauseIcon, ChevronIcon } from './Icons';
 import { audioUrlByNumber, loadQari } from '../lib/recite';
 import { AMOLS, AMOL_TAGS } from '../lib/content/amols';
 import { DUAS, DUA_CATS } from '../lib/content/duas';
@@ -88,10 +88,32 @@ function AmolCard({ amol, on, onToggle, busy }) {
   );
 }
 
+/* ---------- গোটানো শ্রেণি ---------- */
+// সবগুলো একসাথে খোলা থাকলে পাতাটা এলোমেলো লাগে, তাই বন্ধ অবস্থায় শুরু হয়
+
+function Group({ name, done, total, open, onToggle, children }) {
+  return (
+    <section className={'group' + (open ? ' open' : '')}>
+      <button type="button" className="group-head" onClick={onToggle} aria-expanded={open}>
+        <span className="group-name">{name}</span>
+        <span className="group-count">
+          {bnNum(done)}/{bnNum(total)}
+        </span>
+        <span className="group-arrow" aria-hidden="true">
+          <ChevronIcon dir={open ? 'left' : 'right'} size={16} />
+        </span>
+      </button>
+      {open ? <div className="group-body">{children}</div> : null}
+    </section>
+  );
+}
+
 /* ---------- পুরো পাতা ---------- */
 
 export default function AmolBoard() {
   const [tab, setTab] = useState('dua');
+  const [openCats, setOpenCats] = useState({});
+  const toggleCat = (k) => setOpenCats((o) => ({ ...o, [k]: !o[k] }));
   const [ticks, setTicks] = useState({ dua: [], amol: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -214,13 +236,14 @@ export default function AmolBoard() {
             if (!items.length) return null;
             const done = items.filter((d) => ticks.dua.includes(d.id)).length;
             return (
-              <div key={c.id}>
-                <div className="section-title">
-                  {c.name}
-                  <span className="cat-count">
-                    {bnNum(done)}/{bnNum(items.length)}
-                  </span>
-                </div>
+              <Group
+                key={c.id}
+                name={c.name}
+                done={done}
+                total={items.length}
+                open={Boolean(openCats['dua:' + c.id])}
+                onToggle={() => toggleCat('dua:' + c.id)}
+              >
                 <div className="item-list">
                   {items.map((d) => (
                     <DuaCard
@@ -234,7 +257,7 @@ export default function AmolBoard() {
                     />
                   ))}
                 </div>
-              </div>
+              </Group>
             );
           })
         : null}
@@ -245,13 +268,14 @@ export default function AmolBoard() {
             if (!items.length) return null;
             const done = items.filter((a) => ticks.amol.includes(a.id)).length;
             return (
-              <div key={tag}>
-                <div className="section-title">
-                  {tag}
-                  <span className="cat-count">
-                    {bnNum(done)}/{bnNum(items.length)}
-                  </span>
-                </div>
+              <Group
+                key={tag}
+                name={tag}
+                done={done}
+                total={items.length}
+                open={Boolean(openCats['amol:' + tag])}
+                onToggle={() => toggleCat('amol:' + tag)}
+              >
                 <div className="item-list">
                   {items.map((a) => (
                     <AmolCard
@@ -263,7 +287,7 @@ export default function AmolBoard() {
                     />
                   ))}
                 </div>
-              </div>
+              </Group>
             );
           })
         : null}

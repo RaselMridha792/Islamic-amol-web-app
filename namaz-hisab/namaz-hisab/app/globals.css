@@ -2208,3 +2208,259 @@ button {
 .toggle-row:disabled {
   opacity: 0.6;
 }
+
+/* আজকের ওয়াক্তের সময় — শহর ঠিক বেছেছেন কিনা বোঝার জন্য */
+.times-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.times-row span {
+  flex: 1 1 auto;
+  min-width: 62px;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  color: var(--pink-soft);
+}
+
+.times-row b {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-bottom: 1px;
+}
+
+/* ---------- গোটানো শ্রেণি ---------- */
+
+.group {
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.group.open {
+  border-color: var(--line-strong);
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text);
+}
+
+.group-name {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Noto Serif Bengali', serif;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.group-count {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: var(--panel-2);
+}
+
+.group-arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--pink-soft);
+  transition: transform 0.18s ease;
+}
+
+.group.open .group-arrow {
+  transform: rotate(-90deg);
+}
+
+.group-body {
+  padding: 0 10px 10px;
+}
+
+/* খোপের ভেতরে কার্ডের কিনারা নরম করি */
+.group-body .item-card {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* ---------- খোলার মুখের পর্দা ---------- */
+
+.preloader {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.pre-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  animation: pre-in 0.5s ease both;
+}
+
+/* পেছনের নরম আলোটা ধীরে শ্বাস নেয় */
+.pre-halo {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  margin-left: -140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--pink-glow), transparent 68%);
+  animation: pre-breathe 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.pre-duo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pre-face {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--arch);
+  overflow: hidden;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  color: var(--pink-soft);
+  font-family: 'Noto Serif Bengali', serif;
+  font-size: 30px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  animation: pre-rise 2.6s ease-in-out infinite;
+}
+
+.pre-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pre-face:first-child {
+  transform-origin: right bottom;
+  margin-right: -14px;
+}
+
+.pre-face:last-child {
+  transform-origin: left bottom;
+  margin-left: -14px;
+}
+
+/* দুজনের মাঝের গিঁট */
+.pre-knot {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  color: var(--gold);
+  box-shadow: 0 0 0 5px var(--bg), 0 0 22px var(--pink-glow);
+  animation: pre-turn 4.5s linear infinite;
+}
+
+.pre-name {
+  text-align: center;
+}
+
+.pre-name h1 {
+  margin: 0;
+  font-family: 'Noto Serif Bengali', serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.pre-name p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  letter-spacing: 2.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* তসবিহর দানার মতো — লেখা ছাড়াই বোঝা যায় কিছু চলছে */
+.pre-beads {
+  display: flex;
+  gap: 7px;
+}
+
+.pre-beads i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pink-soft);
+  opacity: 0.25;
+  animation: pre-bead 1.4s ease-in-out infinite;
+}
+
+.pre-beads i:nth-child(2) { animation-delay: 0.12s; }
+.pre-beads i:nth-child(3) { animation-delay: 0.24s; }
+.pre-beads i:nth-child(4) { animation-delay: 0.36s; }
+.pre-beads i:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes pre-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pre-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+@keyframes pre-rise {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-1.2deg); }
+}
+
+@keyframes pre-turn {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(12deg); }
+}
+
+@keyframes pre-bead {
+  0%, 100% { opacity: 0.22; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.15); }
+}
+
+/* যাঁরা নড়াচড়া কম পছন্দ করেন */
+@media (prefers-reduced-motion: reduce) {
+  .pre-halo,
+  .pre-face,
+  .pre-knot,
+  .pre-beads i,
+  .pre-stage {
+    animation: none;
+  }
+}

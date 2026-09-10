@@ -108,6 +108,22 @@ export function ensureSchema() {
         )
       `,
       sql`create index if not exists nh_push_user on nh_push(user_id)`,
+      // নামাজের সময় হিসাব করতে জায়গা লাগে। না দিলে ঢাকা ধরা হয়।
+      sql`alter table nh_users add column if not exists lat double precision`,
+      sql`alter table nh_users add column if not exists lng double precision`,
+      sql`alter table nh_users add column if not exists city text`,
+      sql`alter table nh_users add column if not exists notify_prayer boolean not null default false`,
+      sql`alter table nh_users add column if not exists notify_quran boolean not null default false`,
+      // একই জিনিস দুবার যেন না পাঠাই — cron ঘন ঘন চলে
+      sql`
+        create table if not exists nh_notified (
+          user_id  bigint not null references nh_users(id) on delete cascade,
+          day      date not null,
+          slot     text not null,
+          sent_at  timestamptz not null default now(),
+          primary key (user_id, day, slot)
+        )
+      `,
       sql`
         create table if not exists nh_quiz (
           user_id  bigint not null references nh_users(id) on delete cascade,

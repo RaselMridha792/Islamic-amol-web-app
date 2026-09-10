@@ -1,0 +1,29 @@
+# নামাজের সময় নোটিফিকেশন পাঠানোর জন্য অ্যাপের endpoint টা ডাকে।
+#
+# কেন এটা লাগছে: Vercel এর Hobby প্ল্যানে cron দিনে একবারই চলে, আর সময়ও
+# ±৫৯ মিনিট এদিক-ওদিক হয় — নামাজের সময়ের জন্য ওটা কাজে আসে না।
+#
+# GitHub মাঝে মাঝে দেরি করে চালায়, তাই সময় একদম কাঁটায় কাঁটায় চাই হলে
+# cron-job.org এর মতো সেবা দিয়ে একই ঠিকানা প্রতি মিনিটে ডাকা যায়।
+#
+# লাগবে দুটো repository secret:  APP_URL  আর  CRON_SECRET
+
+name: নামাজের সময় মনে করিয়ে দেওয়া
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: endpoint ডাকি
+        run: |
+          code=$(curl -s -o /tmp/out.txt -w "%{http_code}" --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/prayer")
+          echo "HTTP $code"
+          cat /tmp/out.txt
+          test "$code" = "200"

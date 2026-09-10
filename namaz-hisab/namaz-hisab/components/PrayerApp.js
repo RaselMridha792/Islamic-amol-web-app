@@ -8,6 +8,7 @@ import ToastStack from './Toast';
 import Avatar from './Avatar';
 import { useAuth } from './AuthProvider';
 import InstallButton from './InstallButton';
+import Preloader from './Preloader';
 import { ChevronIcon, CloudIcon } from './Icons';
 import { PRAYERS, STATUS_MAP, dayTotal, dayFilled } from '../lib/prayers';
 import { playSound, warmUpAudio } from '../lib/sound';
@@ -21,6 +22,7 @@ import {
   loadPhotoCache,
   loadRecords,
   loadSoundOn,
+  saveMeCache,
   saveMeta,
   savePartnerCache,
   savePhotoCache,
@@ -59,10 +61,12 @@ export default function PrayerApp() {
 
   // লগইনের উত্তরে ছবি এলে সেটাই নিই, আর পরের বারের জন্য জমিয়ে রাখি
   useEffect(() => {
-    if (user && typeof user.photo === 'string') {
+    if (!user) return;
+    if (typeof user.photo === 'string') {
       setPhoto(user.photo);
       savePhotoCache(user.photo);
     }
+    saveMeCache({ name: user.name || user.username, photo: user.photo || '' });
   }, [user]);
 
   const partnerPerson = useMemo(
@@ -242,15 +246,7 @@ export default function PrayerApp() {
 
   const syncLabel = { syncing: 'মেলানো হচ্ছে…', ok: 'সব মিলে আছে', error: 'মেলানো যায়নি' }[sync];
 
-  if (!ready) {
-    return (
-      <main className="shell">
-        <div className="empty-note" style={{ marginTop: 40 }}>
-          হিসাবের খাতা খোলা হচ্ছে…
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <Preloader />;
 
   return (
     <>

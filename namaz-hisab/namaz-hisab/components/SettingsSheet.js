@@ -11,6 +11,7 @@ import { getPair, joinPair, makePairCode, unpair } from '../lib/cloud';
 import { LinkIcon } from './Icons';
 import InstallButton from './InstallButton';
 import { currentSubscription, disablePush, enablePush, pushSupported, testPush } from '../lib/pushClient';
+import { CITIES, DEFAULT_PLACE, hhmm, timesFor } from '../lib/prayerTimes';
 
 // ছবি ছোট করে নিই যাতে সহজে জমা থাকে
 function shrinkImage(file, max = 260) {
@@ -152,6 +153,9 @@ export default function SettingsSheet({ onClose }) {
   const [soundOn, setSoundOn] = useState(true);
   const [hardQuiz, setHardQuiz] = useState(false);
   const [push, setPush] = useState({ can: false, on: false, busy: false });
+  const [city, setCity] = useState(DEFAULT_PLACE.city);
+  const [notifyPrayer, setNotifyPrayer] = useState(false);
+  const [notifyQuran, setNotifyQuran] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -172,6 +176,9 @@ export default function SettingsSheet({ onClose }) {
           setName(d.name || '');
           setPhoto(d.photo || '');
           setHardQuiz(Boolean(d.hardQuiz));
+          setCity(d.city || DEFAULT_PLACE.city);
+          setNotifyPrayer(Boolean(d.notifyPrayer));
+          setNotifyQuran(Boolean(d.notifyQuran));
         }
       })
       .catch(() => {});
@@ -196,7 +203,16 @@ export default function SettingsSheet({ onClose }) {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, photo, hardQuiz }),
+        body: JSON.stringify({
+          name,
+          photo,
+          hardQuiz,
+          city,
+          lat: place.lat,
+          lng: place.lng,
+          notifyPrayer,
+          notifyQuran,
+        }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'সেভ হলো না');
@@ -226,6 +242,10 @@ export default function SettingsSheet({ onClose }) {
       setMsg(err.message || 'নোটিফিকেশন চালু করা গেল না');
     }
   }
+
+  const place = CITIES.find((c) => c.city === city) || DEFAULT_PLACE;
+  // আজকের সময়গুলো দেখিয়ে দিই, যাতে ঠিক শহর বেছেছেন কিনা বোঝা যায়
+  const today = timesFor(place.lat, place.lng);
 
   function toggleSound() {
     const next = !soundOn;
@@ -305,15 +325,65 @@ export default function SettingsSheet({ onClose }) {
         <div className="section-title">নোটিফিকেশন ও অ্যাপ</div>
 
         {push.can ? (
-          <button type="button" className="toggle-row" onClick={togglePush} disabled={push.busy}>
-            <span>
-              রোজকার মনে করিয়ে দিন
-              <small>রাতে যদি কোনো ওয়াক্ত লেখা বাকি থাকে, জানিয়ে দেবে</small>
-            </span>
-            <span className={'switch' + (push.on ? ' on' : '')} aria-hidden="true">
-              <span />
-            </span>
-          </button>
+          <>
+            <button type="button" className="toggle-row" onClick={togglePush} disabled={push.busy}>
+              <span>
+                এই ডিভাইসে নোটিফিকেশন
+                <small>আগে এটা চালু করতে হবে</small>
+              </span>
+              <span className={'switch' + (push.on ? ' on' : '')} aria-hidden="true">
+                <span />
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="toggle-row"
+              disabled={!push.on}
+              onClick={() => setNotifyPrayer((v) => !v)}
+            >
+              <span>
+                প্রতি ওয়াক্তের সময়
+                <small>ফজর, যোহর, আসর, মাগরিব, এশা — সময় হলেই</small>
+              </span>
+              <span className={'switch' + (notifyPrayer ? ' on' : '')} aria-hidden="true">
+                <span />
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="toggle-row"
+              disabled={!push.on}
+              onClick={() => setNotifyQuran((v) => !v)}
+            >
+              <span>
+                ফজরের পর কুরআন
+                <small>ফজরের ২৫ মিনিট পর মনে করিয়ে দেবে</small>
+              </span>
+              <span className={'switch' + (notifyQuran ? ' on' : '')} aria-hidden="true">
+                <span />
+              </span>
+            </button>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <label htmlFor="city">আপনার শহর</label>
+              <div className="qari-pick" style={{ marginBottom: 8 }}>
+                <span>শহর</span>
+                <select id="city" value={city} onChange={(e) => setCity(e.target.value)}>
+                  {CITIES.map((c) => (
+                    <option key={c.city} value={c.city}>{c.city}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="times-row">
+                {[['ফজর', today.fajr], ['যোহর', today.dhuhr], ['আসর', today.asr],
+                  ['মাগরিব', today.maghrib], ['এশা', today.isha]].map(([n, t]) => (
+                  <span key={n}><b>{n}</b>{hhmm(t)}</span>
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
           <div className="empty-note" style={{ textAlign: 'left', fontSize: 12.5 }}>
             এই ব্রাউজারে নোটিফিকেশন চলে না। আইফোনে আগে হোম স্ক্রিনে অ্যাড করে নিলে চলবে।
