@@ -232,17 +232,7 @@ export default function AmolBoard() {
 
       {!loading && tab === 'dua'
         ? DUA_CATS.map((c) => {
-            // বেশিরভাগ শ্রেণি তার নিজের দোয়া নিয়ে। কিন্তু "নামাজের পরের আমল"
-            // অন্য শ্রেণির দোয়াগুলোই আইডি ধরে দেখায় — কতবার আর কখনটা
-            // রুটিনের নিজের, বাকিটা মূল দোয়ারই। একই আইডি বলে টিকও এক।
-            const items = c.items
-              ? c.items
-                  .map((it) => {
-                    const d = DUAS.find((x) => x.id === it.id);
-                    return d ? { ...d, when: it.when, count: it.count } : null;
-                  })
-                  .filter(Boolean)
-              : DUAS.filter((d) => d.cat === c.id);
+            const items = DUAS.filter((d) => d.cat === c.id);
             if (!items.length) return null;
             const done = items.filter((d) => ticks.dua.includes(d.id)).length;
             return (
