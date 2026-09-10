@@ -89,6 +89,13 @@ export function ensureSchema() {
         )
       `,
       sql`create unique index if not exists nh_questions_uniq on nh_questions(md5(question))`,
+      // প্রশ্ন কতটা কঠিন: easy | medium | hard।
+      // রোজকার কুইজে সহজ আর মাঝারিগুলোই আসে, হাদিসের বর্ণনাকারী-শূন্যস্থানের
+      // মতো কঠিনগুলো শুধু চাইলে।
+      sql`alter table nh_questions add column if not exists level text not null default 'easy'`,
+      sql`create index if not exists nh_questions_level on nh_questions(level)`,
+      // কে কঠিন প্রশ্নও চায়
+      sql`alter table nh_users add column if not exists hard_quiz boolean not null default false`,
       sql`
         create table if not exists nh_quiz (
           user_id  bigint not null references nh_users(id) on delete cascade,

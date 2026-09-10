@@ -148,6 +148,7 @@ export default function SettingsSheet({ onClose }) {
   const [name, setName] = useState(user ? user.name || user.username : '');
   const [photo, setPhoto] = useState('');
   const [soundOn, setSoundOn] = useState(true);
+  const [hardQuiz, setHardQuiz] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -162,6 +163,7 @@ export default function SettingsSheet({ onClose }) {
         if (d && !d.error) {
           setName(d.name || '');
           setPhoto(d.photo || '');
+          setHardQuiz(Boolean(d.hardQuiz));
         }
       })
       .catch(() => {});
@@ -186,7 +188,7 @@ export default function SettingsSheet({ onClose }) {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, photo }),
+        body: JSON.stringify({ name, photo, hardQuiz }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'সেভ হলো না');
@@ -272,6 +274,21 @@ export default function SettingsSheet({ onClose }) {
             </div>
           ))}
         </div>
+
+        <div className="section-title">কুইজ</div>
+        <button
+          type="button"
+          className="toggle-row"
+          onClick={() => setHardQuiz((v) => !v)}
+        >
+          <span>
+            কঠিন প্রশ্নও দিন
+            <small>হাদিসের বর্ণনাকারী ও শূন্যস্থান — আলিমদের মতো কঠিন</small>
+          </span>
+          <span className={'switch' + (hardQuiz ? ' on' : '')} aria-hidden="true">
+            <span />
+          </span>
+        </button>
 
         <button type="button" className="toggle-row" onClick={toggleSound}>
           <span>প্রতিটি ট্যাপে শব্দ</span>

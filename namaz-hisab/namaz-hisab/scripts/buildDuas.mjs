@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { toBanglaUccharon } from '../lib/uccharon.js';
 import { globalAyah } from '../lib/quranMeta.js';
+import { surahBn } from '../lib/content/surahNames.js';
 
 const ROOT = process.cwd();
 const chapters = {};
@@ -28,7 +29,7 @@ function fromQuran(surah, from, to = from) {
     ar: vs.map((v) => v.text).join(' '),
     tr: vs.map((v) => toBanglaUccharon(v.text, surah, v.id)).join(' '),
     bn: vs.map((v) => v.translation).join(' '),
-    ref: `সুরা ${c.transliteration} ${from}${to !== from ? '-' + to : ''}`,
+    ref: `সুরা ${surahBn(surah)} ${from}${to !== from ? '-' + to : ''}`,
     // তিলাওয়াত শোনার জন্য আয়াতগুলোর বিশ্বজোড়া নম্বর
     audio: vs.map((v) => globalAyah(surah, v.id)),
   };
@@ -49,6 +50,7 @@ const QURANIC = [
   ['ayyub', 'রোগমুক্তির দোয়া', 'অসুস্থতায়', 21, 83, 83],
   ['qurrata-ayun', 'স্ত্রী-সন্তানের জন্য দোয়া', 'পরিবারের কল্যাণ চেয়ে', 25, 74, 74],
   ['pita-mata', 'মা-বাবার জন্য দোয়া', 'প্রতিদিন', 17, 24, 24],
+  ['mulk', 'সুরা মুলক', 'প্রতি রাতে ঘুমানোর আগে', 67, 1, 30],
   ['ikhlas', 'সুরা ইখলাস', 'ঘুমানোর আগে তিনবার', 112, 1, 4],
   ['falaq', 'সুরা ফালাক', 'সকাল-সন্ধ্যা ও ঘুমানোর আগে', 113, 1, 5],
   ['nas', 'সুরা নাস', 'সকাল-সন্ধ্যা ও ঘুমানোর আগে', 114, 1, 6],

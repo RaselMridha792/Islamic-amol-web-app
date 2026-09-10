@@ -57,7 +57,7 @@ export async function userFromToken(token) {
   await ensureSchema();
   const sql = db();
   const rows = await sql`
-    select u.id, u.username, u.display_name, u.partner_id
+    select u.id, u.username, u.display_name, u.partner_id, u.hard_quiz
     from nh_sessions s
     join nh_users u on u.id = s.user_id
     where s.token_hash = ${hashToken(token)} and s.expires_at > now()
@@ -69,6 +69,7 @@ export async function userFromToken(token) {
     username: rows[0].username,
     name: rows[0].display_name || rows[0].username,
     partnerId: rows[0].partner_id ? Number(rows[0].partner_id) : null,
+    hardQuiz: Boolean(rows[0].hard_quiz),
   };
 }
 

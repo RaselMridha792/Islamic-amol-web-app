@@ -12,7 +12,11 @@ export async function GET(req) {
     const sql = db();
     const rows = await sql`select people from nh_profile where user_id = ${gate.user.id} limit 1`;
     const p = rows[0] && rows[0].people ? rows[0].people : {};
-    return NextResponse.json({ name: gate.user.name, photo: p.photo || '' });
+    return NextResponse.json({
+      name: gate.user.name,
+      photo: p.photo || '',
+      hardQuiz: Boolean(gate.user.hardQuiz),
+    });
   } catch (err) {
     return fail('তথ্য আনা গেল না', 503);
   }
@@ -31,13 +35,16 @@ export async function POST(req) {
 
   try {
     const sql = db();
-    await sql`update nh_users set display_name = ${name} where id = ${gate.user.id}`;
+    const hard = body.hardQuiz === true;
+    await sql`
+      update nh_users set display_name = ${name}, hard_quiz = ${hard} where id = ${gate.user.id}
+    `;
     await sql`
       insert into nh_profile (user_id, people, updated_at)
       values (${gate.user.id}, ${JSON.stringify({ photo })}::jsonb, ${Date.now()})
       on conflict (user_id) do update set people = excluded.people, updated_at = excluded.updated_at
     `;
-    return NextResponse.json({ name, photo });
+    return NextResponse.json({ name, photo, hardQuiz: hard });
   } catch (err) {
     return fail('সেভ করা গেল না', 503);
   }

@@ -8,7 +8,42 @@ export const dynamic = 'force-dynamic';
 
 // আজকের ১০টা প্রশ্ন — একবার ঠিক হয়ে গেলে দিনভর একই থাকে,
 // তাই পাতা রিফ্রেশ করে নতুন সহজ প্রশ্ন আনা যায় না
-async function todaysIds(sql, userId, day) {
+// রোজকার কুইজে সহজ-মাঝারিই আসে। কেউ চাইলে (hard_quiz) হাদিসের কঠিনগুলোও।
+// সহজের ভাগ বেশি রাখি, নইলে শুরুতেই কঠিন লাগে।
+function levelsFor(hard) {
+  return hard ? ['easy', 'medium', 'hard'] : ['easy', 'medium'];
+}
+
+// দিনটা যেন একঘেয়ে না লাগে, তাই মিশিয়ে দিই:
+// অর্ধেক হাতে লেখা মৌলিক প্রশ্ন (নামাজ, রোজা, নবী, আখলাক) — এগুলোই সবচেয়ে
+// ধরার মতো; বাকিটা সুরার তথ্য আর মাঝারি। নইলে পুরো দিনটাই সুরার প্রশ্ন হয়ে যায়।
+async function pickIds(sql, count, exclude, hard) {
+  const levels = levelsFor(hard);
+  const taken = exclude.slice();
+  const out = [];
+
+  async function take(where, params, n) {
+    if (n <= 0) return;
+    const rows = await sql.query(
+      `select id from nh_questions where ${where} and not (id = any($1::bigint[]))
+       order by random() limit $${params.length + 2}`,
+      [taken, ...params, n]
+    );
+    rows.forEach((r) => {
+      out.push(Number(r.id));
+      taken.push(Number(r.id));
+    });
+  }
+
+  await take("source = 'manual'", [], Math.ceil(count * 0.5));
+  await take("level = 'easy' and source <> 'manual'", [], Math.ceil(count * 0.25));
+  await take('level = any($2::text[])', [levels], count - out.length);
+  // এখনো কম পড়লে যা আছে তা-ই
+  await take('level = any($2::text[])', [levels], count - out.length);
+  return out;
+}
+
+async function todaysIds(sql, userId, day, hard) {
   const have = await sql`select qids from nh_quiz where user_id = ${userId} and day = ${day} limit 1`;
 
   if (have[0]) {
@@ -24,15 +59,7 @@ async function todaysIds(sql, userId, day) {
     if (good.length === ids.length) return ids;
 
     const need = Math.max(DAILY_QUIZ_COUNT - good.length, 0);
-    let refill = [];
-    if (need > 0) {
-      const picked = await sql.query(
-        `select id from nh_questions where not (id = any($1::bigint[]))
-         order by random() limit $2`,
-        [good, need]
-      );
-      refill = picked.map((r) => Number(r.id));
-    }
+    const refill = need > 0 ? await pickIds(sql, need, good, hard) : [];
     const next = good.concat(refill);
     await sql`
       update nh_quiz set qids = ${JSON.stringify(next)}::jsonb
@@ -41,10 +68,7 @@ async function todaysIds(sql, userId, day) {
     return next;
   }
 
-  const picked = await sql`
-    select id from nh_questions order by random() limit ${DAILY_QUIZ_COUNT}
-  `;
-  const ids = picked.map((r) => Number(r.id));
+  const ids = await pickIds(sql, DAILY_QUIZ_COUNT, [], hard);
   if (!ids.length) return [];
   await sql`
     insert into nh_quiz (user_id, day, qids) values (${userId}, ${day}, ${JSON.stringify(ids)}::jsonb)
@@ -61,7 +85,7 @@ export async function GET(req) {
 
   try {
     const sql = db();
-    const ids = (await todaysIds(sql, gate.user.id, day)).map(Number);
+    const ids = (await todaysIds(sql, gate.user.id, day, gate.user.hardQuiz)).map(Number);
     if (!ids.length) return NextResponse.json({ day, questions: [], done: 0, correct: 0 });
 
     const [qs, answers] = await Promise.all([
@@ -115,16 +139,11 @@ export async function POST(req) {
   if (body.more) {
     try {
       const sql = db();
-      const have = (await todaysIds(sql, gate.user.id, day)).map(Number);
+      const have = (await todaysIds(sql, gate.user.id, day, gate.user.hardQuiz)).map(Number);
       if (have.length >= MAX_PER_DAY) {
         return fail('আজকের মতো যথেষ্ট হয়েছে, কাল আবার নতুন প্রশ্ন আসবে');
       }
-      const picked = await sql.query(
-        `select id from nh_questions where not (id = any($1::bigint[]))
-         order by random() limit $2`,
-        [have, MORE_COUNT]
-      );
-      const add = picked.map((r) => Number(r.id));
+      const add = await pickIds(sql, MORE_COUNT, have, gate.user.hardQuiz);
       if (!add.length) return fail('আর কোনো নতুন প্রশ্ন নেই');
       const next = have.concat(add);
       await sql`
@@ -143,7 +162,7 @@ export async function POST(req) {
 
   try {
     const sql = db();
-    const ids = (await todaysIds(sql, gate.user.id, day)).map(Number);
+    const ids = (await todaysIds(sql, gate.user.id, day, gate.user.hardQuiz)).map(Number);
     if (!ids.includes(qid)) return fail('এই প্রশ্নটা আজকের তালিকায় নেই');
 
     const rows = await sql`select answer, options from nh_questions where id = ${qid} limit 1`;

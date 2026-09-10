@@ -2161,3 +2161,12 @@ button {
   background: rgba(231, 194, 125, 0.1);
   color: var(--gold);
 }
+
+/* সুইচের পাশে ছোট ব্যাখ্যা */
+.toggle-row span small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}

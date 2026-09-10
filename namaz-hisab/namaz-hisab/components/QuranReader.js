@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
 import { ChevronIcon, CheckIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { SURAHS } from '../lib/quranMeta';
+import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
 import { QARIS, ayahAudioUrl, loadQari, saveQari } from '../lib/recite';
 import { bnNum } from '../lib/store';
@@ -48,6 +49,7 @@ function SurahList({ onOpen, readBySurah }) {
     if (!term) return SURAHS;
     return SURAHS.filter(
       (s) =>
+        surahBn(s.id).includes(q.trim()) ||
         s.tr.toLowerCase().includes(term) ||
         s.bn.toLowerCase().includes(term) ||
         String(s.id) === term ||
@@ -76,7 +78,7 @@ function SurahList({ onOpen, readBySurah }) {
                 {done ? <CheckIcon size={13} /> : bnNum(s.id)}
               </span>
               <span className="surah-mid">
-                <b>{s.tr}</b>
+                <b>{surahBn(s.id)}</b>
                 <small>
                   {s.bn} · {bnNum(s.ayahs)} আয়াত · {s.type === 'meccan' ? 'মাক্কি' : 'মাদানি'}
                 </small>
@@ -177,7 +179,7 @@ function SurahView({ id, qari, onBack, readAyahs, onToggle, onWholeSurah, busy }
           <ChevronIcon dir="left" />
         </button>
         <div className="month-title">
-          <strong>{meta.tr}</strong>
+          <strong>{surahBn(id)}</strong>
           <span>
             {meta.bn} · {bnNum(meta.ayahs)} আয়াত
           </span>
