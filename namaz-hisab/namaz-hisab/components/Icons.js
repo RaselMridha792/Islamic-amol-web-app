@@ -212,3 +212,14 @@ export function EyeOffIcon({ size = 17 }) {
     </svg>
   );
 }
+
+// পারা — একটার উপর একটা স্তর
+export function LayersIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5Z" />
+      <path d="M3.5 12.4 12 16.9l8.5-4.5" />
+      <path d="M3.5 16.6 12 21.1l8.5-4.5" />
+    </svg>
+  );
+}

@@ -10,7 +10,10 @@ const SHELL = 'deen-shell-' + VERSION;   // পাতা, JS, CSS
 const QURAN = 'deen-quran-' + VERSION;   // কুরআনের লেখা
 
 // প্রথমবারেই যেটুকু থাকলে অফলাইনে পাতা খোলে
-const PRECACHE = ['/', '/quran', '/quiz', '/amol', '/dashboard', '/manifest.json'];
+// পাতাগুলো জমিয়ে রাখি না — ওগুলোতে কোন JS ফাইল লাগবে সেটা লেখা থাকে, আর
+// নতুন সংস্করণে ফাইলের নাম বদলে যায়। পুরনো পাতা জমা থাকলে নেট থাকা সত্ত্বেও
+// একবার পুরনোটা দেখানোর ঝুঁকি থাকে। নেট না থাকলে পাতা তো এমনিতেই জমা হয়।
+const PRECACHE = ['/manifest.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

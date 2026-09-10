@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from './PageHead';
-import { ChevronIcon, CheckIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
+import { BookIcon, ChevronIcon, CheckIcon, LayersIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
 import { JUZ_NAMES, JUZ_RANGE, SURAHS, juzBreaksIn, juzParts, juzSpanOf } from '../lib/quranMeta';
 import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
@@ -493,14 +493,28 @@ export default function QuranReader() {
       {msg ? <div className="auth-error">{msg}</div> : null}
 
       {!open ? (
-        <div className="pickbar">
-          <button type="button" className={'pickbar-btn' + (view === 'surah' ? ' on' : '')}
-                  onClick={() => setView('surah')}>
-            সুরা ({bnNum(114)})
+        <div className="pickbar" role="tablist" aria-label="কীভাবে দেখবেন">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'surah'}
+            className={'pickbar-btn' + (view === 'surah' ? ' on' : '')}
+            onClick={() => setView('surah')}
+          >
+            <BookIcon size={16} />
+            সুরা
+            <em>{bnNum(114)}</em>
           </button>
-          <button type="button" className={'pickbar-btn' + (view === 'juz' ? ' on' : '')}
-                  onClick={() => setView('juz')}>
-            পারা ({bnNum(30)})
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'juz'}
+            className={'pickbar-btn' + (view === 'juz' ? ' on' : '')}
+            onClick={() => setView('juz')}
+          >
+            <LayersIcon size={16} />
+            পারা
+            <em>{bnNum(30)}</em>
           </button>
         </div>
       ) : null}

@@ -2614,7 +2614,12 @@ html.lite .pre-halo {
 }
 
 .pickbar-btn {
-  padding: 9px 6px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 6px;
   border: none;
   border-radius: 11px;
   background: transparent;
@@ -2624,9 +2629,38 @@ html.lite .pre-halo {
   font-weight: 600;
 }
 
+.pickbar-btn em {
+  font-style: normal;
+  font-family: var(--font-body), sans-serif;
+  font-size: 10.5px;
+  font-weight: 400;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
 .pickbar-btn.on {
   background: rgba(255, 61, 130, 0.16);
   color: var(--text);
+}
+
+.pickbar-btn.on em {
+  background: rgba(255, 61, 130, 0.22);
+  color: var(--pink-soft);
+}
+
+/* বেছে নেওয়া ট্যাবের নিচে ছোট দাগ — কোনটা চালু আছে যেন এক নজরে বোঝা যায় */
+.pickbar-btn.on::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 26px;
+  height: 2px;
+  margin-left: -13px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--pink), var(--gold));
 }
 
 /* ---------- পারার তালিকা ---------- */
