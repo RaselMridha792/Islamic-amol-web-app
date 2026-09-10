@@ -253,7 +253,9 @@ function analyze(src) {
   const at = [];
   s.forEach((c, k) => { if (isLetter(c)) at.push(k); });
 
-  const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1, lead: null };
+  const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1, lead: null, wasl: false };
+  // ওয়াসলা দিয়ে শুরু হলে আগের শব্দ থাকলে ওই আলিফটা পড়া হয় না
+  out.wasl = s[0] === WASLA;
   // কুরআনের লিপিতে ওয়াসলা (ٱ) থাকে, কিন্তু সাধারণ লেখায় সাধারণ আলিফ (ا)।
   // দুটোই ধরতে হবে, নইলে "সুবহানাল্লাহ" হয়ে যায় "সুবহানা আলল্লাহ"।
   const startsAlif = s[0] === WASLA || s[0] === ALIF;
@@ -349,6 +351,19 @@ export function toBanglaUccharon(arabic, surah, ayah) {
         flush();
         cur = body;
       }
+      return;
+    }
+
+    // ---- বাকি ওয়াসল আলিফ ----
+    // আলিফটা কেবল শুরু করার জন্য — আগে কিছু থাকলে ওটা পড়াই হয় না, বাকিটা
+    // আগের শব্দের লেজে জুড়ে যায়। "আল" আর "আল্লাহ" উপরে সামলানো হয়েছে;
+    // এখানে বাকিগুলো — শাদ্দাওয়ালা লাম (আল্লাযী), আদেশসূচক ক্রিয়া (ইগফির),
+    // আর ইসম-ইবন জাতীয় শব্দ।
+    //   হুওয়াল্লাহু + ল্লাযী   = হুওয়াল্লাহুল্লাযী
+    //   রাব্বি + গফির          = রাব্বিগফির
+    //   আল্লাহুম্মা + কফিনীহিম = আল্লাহুম্মাকফিনীহিম
+    if (a.wasl && !first && cur) {
+      cur += render(a.s, 1, { stop, started: true });
       return;
     }
 
