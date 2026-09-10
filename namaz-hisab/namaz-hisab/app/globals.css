@@ -38,6 +38,7 @@ body {
 body {
   background-color: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
   font-family: var(--font-body), 'Noto Sans Bengali', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.5;
@@ -78,6 +79,7 @@ button {
 .shell {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 460px;
   margin: 0 auto;
   padding: 18px 16px calc(96px + env(safe-area-inset-bottom));
@@ -479,7 +481,7 @@ button {
 
 .month-total {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -727,7 +729,7 @@ button {
 .cal-week,
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -2600,9 +2602,9 @@ html.lite .pre-halo {
 
 /* ---------- সুরা / পারা বেছে নেওয়া ---------- */
 
-.seg {
+.pickbar {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
   margin-top: 12px;
@@ -2611,7 +2613,7 @@ html.lite .pre-halo {
   background: var(--panel);
 }
 
-.seg-btn {
+.pickbar-btn {
   padding: 9px 6px;
   border: none;
   border-radius: 11px;
@@ -2622,7 +2624,7 @@ html.lite .pre-halo {
   font-weight: 600;
 }
 
-.seg-btn.on {
+.pickbar-btn.on {
   background: rgba(255, 61, 130, 0.16);
   color: var(--text);
 }
@@ -2821,4 +2823,60 @@ html.lite .pre-halo {
 .juz-mark span {
   font-family: var(--arabic);
   font-size: 16px;
+}
+
+/* ---------- সরু পর্দায় যেন কিছু ছড়িয়ে না পড়ে ---------- */
+/*
+   ক্যালেন্ডারের ঘর সাতটা কলামে ভাগ। ঘরের ভেতরের লেখা (৳১০০০) কলামের চেয়ে
+   চওড়া হলে ওটা পাশের ঘরের উপর উঠে আসে, আর ছোট ফোনে পুরো সারিটাই বেঁকে যায়।
+   কলামকে minmax(0, 1fr) দিয়ে বাঁধা হয়েছে, ভেতরেরটাও বেঁধে দিই।
+*/
+
+.cal-cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cal-tk {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* নিচের পট্টিতে দুজনের নাম লম্বা হলে বোতামটা যেন পর্দার বাইরে না যায় */
+.footbar-inner > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.footbar .lead,
+.footbar .pair {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.footbar .pair small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* খুব সরু ফোনে ক্যালেন্ডারের লেখাগুলো একটু ছোট */
+@media (max-width: 360px) {
+  .cal-cell {
+    padding: 5px 1px 4px;
+  }
+
+  .cal-d {
+    font-size: 11px;
+  }
+
+  .cal-tk {
+    font-size: 8.5px;
+  }
+
+  .seg {
+    width: 2.5px;
+  }
 }

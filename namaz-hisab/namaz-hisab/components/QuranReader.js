@@ -493,12 +493,12 @@ export default function QuranReader() {
       {msg ? <div className="auth-error">{msg}</div> : null}
 
       {!open ? (
-        <div className="seg">
-          <button type="button" className={'seg-btn' + (view === 'surah' ? ' on' : '')}
+        <div className="pickbar">
+          <button type="button" className={'pickbar-btn' + (view === 'surah' ? ' on' : '')}
                   onClick={() => setView('surah')}>
             সুরা ({bnNum(114)})
           </button>
-          <button type="button" className={'seg-btn' + (view === 'juz' ? ' on' : '')}
+          <button type="button" className={'pickbar-btn' + (view === 'juz' ? ' on' : '')}
                   onClick={() => setView('juz')}>
             পারা ({bnNum(30)})
           </button>
