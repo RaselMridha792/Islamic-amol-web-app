@@ -2170,3 +2170,41 @@ button {
   color: var(--muted);
   font-weight: 400;
 }
+
+/* ---------- দোয়া ও আমলের শ্রেণি ---------- */
+
+.cat-count {
+  font-family: 'Hind Siliguri', sans-serif;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--muted);
+  flex: none;
+  order: 9;
+}
+
+/* কতবার পড়তে হয় */
+.count-badge {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 1px 8px;
+  border-radius: 20px;
+  background: rgba(231, 194, 125, 0.14);
+  color: var(--gold);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 500;
+  vertical-align: 1px;
+}
+
+/* হোম স্ক্রিনে অ্যাড করার বোতাম — না লাগলে কিছুই দেখায় না */
+.install-row:empty {
+  display: none;
+}
+
+.install-row {
+  margin-top: 14px;
+}
+
+.toggle-row:disabled {
+  opacity: 0.6;
+}

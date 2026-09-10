@@ -20,7 +20,7 @@ const CONS = {
 };
 
 // আলিফ, হামযা, আইন — নিজের ব্যঞ্জনধ্বনি বাংলায় নেই, স্বরই বসে
-const CARRIER = new Set(['ا', 'ٱ', 'ى', 'ء', 'أ', 'إ', 'ؤ', 'ئ', 'ع']);
+const CARRIER = new Set(['ا', 'ٱ', 'آ', 'ى', 'ء', 'أ', 'إ', 'ؤ', 'ئ', 'ع']);
 
 const FATHA = 'َ';
 const KASRA = 'ِ';
@@ -130,6 +130,48 @@ function render(s, from, opts) {
       continue;
     }
 
+    // ---- শব্দের মাঝে "আল" ----
+    // বিআল্লাহি, ওয়াল্লাহি, বিলকুরআন — উপসর্গের পরেও "আল" বসে।
+    // শুরুর "আল" analyze() সামলায়, এটা মাঝেরটার জন্য।
+    if ((ch === WASLA || ch === ALIF) && started && i > from) {
+      let k1 = i + 1;
+      while (k1 < s.length && !isLetter(s[k1])) k1 += 1;
+      if (s[k1] === LAM && !readMarks(s, k1 + 1).shadda) {
+        let k2 = k1 + 1;
+        while (k2 < s.length && !isLetter(s[k2])) k2 += 1;
+        if (k2 < s.length && CONS[s[k2]]) {
+          if (readMarks(s, k2 + 1).shadda) {
+            // সূর্য হরফ — লাম মিশে যায়: বিল্লাহি, বির্রাহমান
+            out += CONS[s[k2]] + HASANT;
+            i = k2;
+            // এই হরফের শাদ্দাটা এখানেই ধরা হয়ে গেল
+            const mm = readMarks(s, i + 1);
+            let jj = mm.at;
+            let lg = mm.long;
+            if (!lg && !mm.sukun) {
+              const nx2 = s[jj];
+              const af2 = s[jj + 1];
+              const bare2 = nx2 !== undefined && !HARAKAT.has(af2) && af2 !== SHADDA;
+              if (bare2) {
+                if (mm.vowel === 'a' && (nx2 === ALIF || nx2 === MAKSURA)) { lg = 'a'; jj += 1; }
+                else if (mm.vowel === 'i' && nx2 === YA) { lg = 'ii'; jj += 1; }
+                else if (mm.vowel === 'u' && nx2 === WAW) { lg = 'uu'; jj += 1; }
+              }
+            }
+            out += CONS[s[i]];
+            if (lg) out += SIGN[lg];
+            else if (mm.vowel) out += SIGN[mm.vowel];
+            i = jj;
+            continue;
+          }
+          // চন্দ্র হরফ — "ল" থেকে যায়: বিলকুরআন
+          out += 'ল';
+          i = k2;
+          continue;
+        }
+      }
+    }
+
     const m = readMarks(s, i + 1);
     let j = m.at;
     let long = m.long;
@@ -140,10 +182,16 @@ function render(s, from, opts) {
       const nx = s[j];
       const after = s[j + 1];
       const bare = nx !== undefined && !HARAKAT.has(after) && after !== SHADDA;
-      if (bare) {
+      // আলিফের ঠিক পরেই লাম মানে ওটা "আল" — তখন আলিফটা দীর্ঘ স্বর নয়
+      let k = j + 1;
+      while (k < s.length && !isLetter(s[k])) k += 1;
+      const alifIsArticle = nx === ALIF && s[k] === LAM;
+      if (bare && !alifIsArticle) {
         if (m.vowel === 'a' && (nx === ALIF || nx === MAKSURA)) { long = 'a'; j += 1; }
         else if (m.vowel === 'i' && nx === YA) { long = 'ii'; j += 1; }
         else if (m.vowel === 'u' && nx === WAW) { long = 'uu'; j += 1; }
+      } else if (bare && alifIsArticle && m.vowel === 'a') {
+        long = 'a'; // স্বরটা থাকে, আলিফটা "আল" এর জন্য রেখে দিই
       }
     }
 
@@ -206,13 +254,16 @@ function analyze(src) {
   s.forEach((c, k) => { if (isLetter(c)) at.push(k); });
 
   const out = { s, allah: false, article: null, from: 0, skipShaddaAt: -1, lead: null };
+  // কুরআনের লিপিতে ওয়াসলা (ٱ) থাকে, কিন্তু সাধারণ লেখায় সাধারণ আলিফ (ا)।
+  // দুটোই ধরতে হবে, নইলে "সুবহানাল্লাহ" হয়ে যায় "সুবহানা আলল্লাহ"।
+  const startsAlif = s[0] === WASLA || s[0] === ALIF;
 
   // শব্দের প্রথম হরফে শাদ্দা মানে ইদগাম — আগের শব্দের শেষ "ন" এই হরফে মিশে যায়।
   // উসমানি লিপিতে ব্যাপারটা এই শাদ্দা দিয়েই লেখা থাকে।
   if (at.length && CONS[s[at[0]]] && readMarks(s, at[0] + 1).shadda) {
     out.lead = CONS[s[at[0]]];
   }
-  if (s[0] !== WASLA || at.length < 2 || s[at[1]] !== LAM) return out;
+  if (!startsAlif || at.length < 2 || s[at[1]] !== LAM) return out;
 
   // আল্লাহ — এটা "আল" + নাম নয়, গোটাটাই একটা নাম; পুরোটাই আগের শব্দে মিশে যায়
   if (at.length >= 4 && s[at[2]] === LAM && s[at[3]] === HA) {

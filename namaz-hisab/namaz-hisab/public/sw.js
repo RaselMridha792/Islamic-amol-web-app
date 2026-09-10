@@ -5,7 +5,7 @@
 // ওখান দিয়ে আসে, আর ওগুলো সবসময় টাটকা লাগে। জমা থাকে শুধু সেসব ফাইল যেগুলো
 // সবার জন্য এক আর বদলায় না।
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = 'deen-shell-' + VERSION;   // পাতা, JS, CSS
 const QURAN = 'deen-quran-' + VERSION;   // কুরআনের লেখা
 
@@ -99,4 +99,45 @@ self.addEventListener('fetch', (e) => {
         .catch(() => caches.match(req).then((hit) => hit || caches.match('/')))
     );
   }
+});
+
+
+/* ---------- পুশ নোটিফিকেশন ---------- */
+
+self.addEventListener('push', (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch (err) {
+    data = { body: e.data ? e.data.text() : '' };
+  }
+  const title = data.title || 'একসাথে দ্বীনের পথে';
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      lang: 'bn',
+      tag: data.tag || 'deen',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+// নোটিফিকেশনে চাপ দিলে অ্যাপ খুলি। খোলা থাকলে সেই ট্যাবেই নিয়ে যাই,
+// নইলে নতুন করে খুলি।
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.includes(self.location.origin) && 'focus' in c) {
+          c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
 });

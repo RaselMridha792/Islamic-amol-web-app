@@ -9,6 +9,8 @@ import { POINTS } from '../lib/points';
 import { bnNum, loadSoundOn, saveSoundOn } from '../lib/store';
 import { getPair, joinPair, makePairCode, unpair } from '../lib/cloud';
 import { LinkIcon } from './Icons';
+import InstallButton from './InstallButton';
+import { currentSubscription, disablePush, enablePush, pushSupported, testPush } from '../lib/pushClient';
 
 // ছবি ছোট করে নিই যাতে সহজে জমা থাকে
 function shrinkImage(file, max = 260) {
@@ -149,6 +151,7 @@ export default function SettingsSheet({ onClose }) {
   const [photo, setPhoto] = useState('');
   const [soundOn, setSoundOn] = useState(true);
   const [hardQuiz, setHardQuiz] = useState(false);
+  const [push, setPush] = useState({ can: false, on: false, busy: false });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -157,6 +160,11 @@ export default function SettingsSheet({ onClose }) {
   useEffect(() => {
     setMounted(true);
     setSoundOn(loadSoundOn());
+    if (pushSupported()) {
+      currentSubscription()
+        .then((sub) => setPush({ can: true, on: Boolean(sub), busy: false }))
+        .catch(() => setPush({ can: true, on: false, busy: false }));
+    }
     fetch('/api/profile', { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((d) => {
@@ -197,6 +205,25 @@ export default function SettingsSheet({ onClose }) {
     } catch (err) {
       setMsg(err.message);
       setSaving(false);
+    }
+  }
+
+  async function togglePush() {
+    if (push.busy) return;
+    setPush((p) => ({ ...p, busy: true }));
+    setMsg('');
+    try {
+      if (push.on) {
+        await disablePush();
+        setPush({ can: true, on: false, busy: false });
+      } else {
+        await enablePush();
+        setPush({ can: true, on: true, busy: false });
+        await testPush().catch(() => {});
+      }
+    } catch (err) {
+      setPush((p) => ({ ...p, busy: false }));
+      setMsg(err.message || 'নোটিফিকেশন চালু করা গেল না');
     }
   }
 
@@ -273,6 +300,28 @@ export default function SettingsSheet({ onClose }) {
               <b>{s.fine === 0 ? 'কিছু নেই' : '৳ ' + bnNum(s.fine)}</b>
             </div>
           ))}
+        </div>
+
+        <div className="section-title">নোটিফিকেশন ও অ্যাপ</div>
+
+        {push.can ? (
+          <button type="button" className="toggle-row" onClick={togglePush} disabled={push.busy}>
+            <span>
+              রোজকার মনে করিয়ে দিন
+              <small>রাতে যদি কোনো ওয়াক্ত লেখা বাকি থাকে, জানিয়ে দেবে</small>
+            </span>
+            <span className={'switch' + (push.on ? ' on' : '')} aria-hidden="true">
+              <span />
+            </span>
+          </button>
+        ) : (
+          <div className="empty-note" style={{ textAlign: 'left', fontSize: 12.5 }}>
+            এই ব্রাউজারে নোটিফিকেশন চলে না। আইফোনে আগে হোম স্ক্রিনে অ্যাড করে নিলে চলবে।
+          </div>
+        )}
+
+        <div style={{ marginTop: 10 }}>
+          <InstallButton />
         </div>
 
         <div className="section-title">কুইজ</div>

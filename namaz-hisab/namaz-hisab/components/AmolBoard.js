@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import PageHead from './PageHead';
 import { CheckIcon, PlayIcon, PauseIcon } from './Icons';
 import { audioUrlByNumber, loadQari } from '../lib/recite';
-import { AMOLS } from '../lib/content/amols';
-import { DUAS } from '../lib/content/duas';
+import { AMOLS, AMOL_TAGS } from '../lib/content/amols';
+import { DUAS, DUA_CATS } from '../lib/content/duas';
 import { POINTS } from '../lib/points';
 import { bnNum } from '../lib/store';
 import { getTicks, setTick } from '../lib/cloud';
@@ -34,7 +34,10 @@ function DuaCard({ dua, on, onToggle, busy, playing, onPlay }) {
     <section className={'item-card' + (on ? ' done' : '')}>
       <header className="item-head">
         <button type="button" className="item-title" onClick={() => setOpen((v) => !v)}>
-          <b>{dua.title}</b>
+          <b>
+            {dua.title}
+            {dua.count ? <em className="count-badge">{bnNum(dua.count)} বার</em> : null}
+          </b>
           <small>{dua.when}</small>
         </button>
         <div className="ayah-acts">
@@ -205,35 +208,65 @@ export default function AmolBoard() {
       {msg ? <div className="auth-error">{msg}</div> : null}
       {loading ? <div className="empty-note">আনা হচ্ছে…</div> : null}
 
-      {!loading && tab === 'dua' ? (
-        <div className="item-list">
-          {DUAS.map((d) => (
-            <DuaCard
-              key={d.id}
-              dua={d}
-              on={ticks.dua.includes(d.id)}
-              busy={busy === 'dua:' + d.id}
-              playing={playing === d.id}
-              onPlay={playDua}
-              onToggle={() => toggle('dua', d.id)}
-            />
-          ))}
-        </div>
-      ) : null}
+      {!loading && tab === 'dua'
+        ? DUA_CATS.map((c) => {
+            const items = DUAS.filter((d) => d.cat === c.id);
+            if (!items.length) return null;
+            const done = items.filter((d) => ticks.dua.includes(d.id)).length;
+            return (
+              <div key={c.id}>
+                <div className="section-title">
+                  {c.name}
+                  <span className="cat-count">
+                    {bnNum(done)}/{bnNum(items.length)}
+                  </span>
+                </div>
+                <div className="item-list">
+                  {items.map((d) => (
+                    <DuaCard
+                      key={d.id}
+                      dua={d}
+                      on={ticks.dua.includes(d.id)}
+                      busy={busy === 'dua:' + d.id}
+                      playing={playing === d.id}
+                      onPlay={playDua}
+                      onToggle={() => toggle('dua', d.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        : null}
 
-      {!loading && tab === 'amol' ? (
-        <div className="item-list">
-          {AMOLS.map((a) => (
-            <AmolCard
-              key={a.id}
-              amol={a}
-              on={ticks.amol.includes(a.id)}
-              busy={busy === 'amol:' + a.id}
-              onToggle={() => toggle('amol', a.id)}
-            />
-          ))}
-        </div>
-      ) : null}
+      {!loading && tab === 'amol'
+        ? AMOL_TAGS.map((tag) => {
+            const items = AMOLS.filter((a) => a.tag === tag);
+            if (!items.length) return null;
+            const done = items.filter((a) => ticks.amol.includes(a.id)).length;
+            return (
+              <div key={tag}>
+                <div className="section-title">
+                  {tag}
+                  <span className="cat-count">
+                    {bnNum(done)}/{bnNum(items.length)}
+                  </span>
+                </div>
+                <div className="item-list">
+                  {items.map((a) => (
+                    <AmolCard
+                      key={a.id}
+                      amol={a}
+                      on={ticks.amol.includes(a.id)}
+                      busy={busy === 'amol:' + a.id}
+                      onToggle={() => toggle('amol', a.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        : null}
 
       <p className="month-foot">প্রতিদিন রাত ১২টায় টিকগুলো নতুন করে শুরু হয়।</p>
     </main>

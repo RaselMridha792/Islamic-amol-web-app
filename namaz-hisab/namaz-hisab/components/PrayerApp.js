@@ -7,6 +7,7 @@ import PageHead from './PageHead';
 import ToastStack from './Toast';
 import Avatar from './Avatar';
 import { useAuth } from './AuthProvider';
+import InstallButton from './InstallButton';
 import { ChevronIcon, CloudIcon } from './Icons';
 import { PRAYERS, STATUS_MAP, dayTotal, dayFilled } from '../lib/prayers';
 import { playSound, warmUpAudio } from '../lib/sound';
@@ -315,6 +316,10 @@ export default function PrayerApp() {
               </div>
             </>
           ) : null}
+        </div>
+
+        <div className="install-row">
+          <InstallButton />
         </div>
 
         {!partner ? (

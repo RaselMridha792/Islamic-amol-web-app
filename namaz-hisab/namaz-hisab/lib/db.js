@@ -96,6 +96,18 @@ export function ensureSchema() {
       sql`create index if not exists nh_questions_level on nh_questions(level)`,
       // কে কঠিন প্রশ্নও চায়
       sql`alter table nh_users add column if not exists hard_quiz boolean not null default false`,
+      // পুশ নোটিফিকেশনের ঠিকানা। একজনের একাধিক ডিভাইস থাকতে পারে,
+      // তাই প্রতিটি ব্রাউজারের endpoint আলাদা সারি।
+      sql`
+        create table if not exists nh_push (
+          endpoint    text primary key,
+          user_id     bigint not null references nh_users(id) on delete cascade,
+          p256dh      text not null,
+          auth        text not null,
+          created_at  timestamptz not null default now()
+        )
+      `,
+      sql`create index if not exists nh_push_user on nh_push(user_id)`,
       sql`
         create table if not exists nh_quiz (
           user_id  bigint not null references nh_users(id) on delete cascade,
