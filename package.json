@@ -1,0 +1,10 @@
+{
+  "name": "islamic-amol-web-app",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix namaz-hisab/namaz-hisab run dev",
+    "build": "npm --prefix namaz-hisab/namaz-hisab run build",
+    "start": "npm --prefix namaz-hisab/namaz-hisab run start",
+    "lint": "npm --prefix namaz-hisab/namaz-hisab run lint"
+  }
+}
