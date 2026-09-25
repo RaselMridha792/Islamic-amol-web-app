@@ -124,3 +124,21 @@ export const setTick = (kind, item, on) =>
 /* ---------- ড্যাশবোর্ড ---------- */
 
 export const getDashboard = () => call('/api/dashboard');
+
+/* ---------- স্পর্শ: সঙ্গীর স্ক্রিনে আঁকা, ফোন কাঁপানো ---------- */
+
+const touchPost = (body) => call('/api/touch', { method: 'POST', body: JSON.stringify(body) });
+
+export const getTouchStatus = () => call('/api/touch');
+export const getTouch = (id, after = 0) => call(`/api/touch?id=${id}&after=${after}`);
+export const getPendingTouch = () => call('/api/touch?pending=1');
+export const startDraw = (aspect) => touchPost({ action: 'start', aspect });
+export const sendDrawPart = (id, seq, data) => touchPost({ action: 'part', id, seq, data });
+export const endDraw = (id) => touchPost({ action: 'end', id });
+export const sendBuzz = () => touchPost({ action: 'buzz' });
+
+// পাতা বন্ধ হয়ে যাওয়ার মুহূর্তে — fetch তখন মাঝপথে কেটে যায়, beacon যায়
+export function endDrawBeacon(id) {
+  if (typeof navigator === 'undefined' || !navigator.sendBeacon) return false;
+  return navigator.sendBeacon('/api/touch', JSON.stringify({ action: 'end', id }));
+}

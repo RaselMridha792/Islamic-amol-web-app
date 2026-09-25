@@ -23,7 +23,10 @@ function setup() {
 
 // একজনের সব ডিভাইসে পাঠাই।
 // ব্রাউজার ৪০৪/৪১০ বললে ওই ঠিকানা আর নেই — মুছে দিই, নইলে সারি জমতে থাকে।
-export async function sendToUser(userId, payload) {
+//
+// options: { TTL, urgency } — ঘুমন্ত ফোনে তাড়াতাড়ি পৌঁছাতে urgency 'high',
+// আর দেরিতে পৌঁছালে যার মানে থাকে না (যেমন ফোন কাঁপানো) তার TTL ছোট।
+export async function sendToUser(userId, payload, options = undefined) {
   if (!pushReady()) return { sent: 0, gone: 0 };
   setup();
   const sql = db();
@@ -37,7 +40,8 @@ export async function sendToUser(userId, payload) {
       try {
         await webpush.sendNotification(
           { endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } },
-          body
+          body,
+          options
         );
         sent += 1;
       } catch (err) {

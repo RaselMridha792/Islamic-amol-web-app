@@ -232,3 +232,32 @@ export function ListIcon({ size = 18 }) {
     </svg>
   );
 }
+
+// স্পর্শ — সঙ্গীর জন্য
+export function HeartIcon({ size = 18, filled = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z" />
+    </svg>
+  );
+}
+
+// আঁকার কলম
+export function PenIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4.5 19.5 5.6 15 16 4.6a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L9 18.4l-4.5 1.1Z" />
+      <path d="m14.4 6.2 3.4 3.4" />
+    </svg>
+  );
+}
+
+// কাঁপতে থাকা ফোন
+export function VibrateIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="8" y="3.5" width="8" height="17" rx="2" />
+      <path d="M4.8 8.5v7M2.5 10.3v3.4M19.2 8.5v7M21.5 10.3v3.4" />
+    </svg>
+  );
+}

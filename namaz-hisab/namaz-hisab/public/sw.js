@@ -107,12 +107,45 @@ self.addEventListener('fetch', (e) => {
 
 /* ---------- পুশ নোটিফিকেশন ---------- */
 
+// সঙ্গীর আঁকা বা ডাক। অ্যাপ সামনে খোলা থাকলে নোটিফিকেশন দিই না — পাতাকেই
+// জানিয়ে দিই; পাতা নিজে সাথে সাথে আঁকাটা দেখায় বা ফোন কাঁপায়। খোলা না
+// থাকলে নোটিফিকেশন, চাপ দিলে অ্যাপ খুলে আঁকাটা আবার ফুটে ওঠে।
+//
+// ব্রাউজারের নিয়ম: পাতা সামনে না থাকলে পুশ এলে নোটিফিকেশন দেখাতেই হয়,
+// তাই দুটো পথ এভাবেই ভাগ করা।
+async function touchPush(data) {
+  const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const front = list.filter((c) => c.visibilityState === 'visible');
+  if (front.length) {
+    front.forEach((c) =>
+      c.postMessage({ source: 'deen-touch', type: data.type, id: data.id, from: data.from })
+    );
+    return undefined;
+  }
+  return self.registration.showNotification(data.title || 'একসাথে দ্বীনের পথে', {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    lang: 'bn',
+    tag: data.tag || 'touch',
+    renotify: true,
+    // ফোন vibrate বা সাধারণ মোডে থাকলে কাঁপে; পুরো silent-এ ব্রাউজার কাঁপায় না
+    vibrate: data.type === 'buzz' ? [300, 120, 300, 120, 600] : [120, 80, 120],
+    requireInteraction: data.type === 'touch',
+    data: { url: data.url || '/' },
+  });
+}
+
 self.addEventListener('push', (e) => {
   let data = {};
   try {
     data = e.data ? e.data.json() : {};
   } catch (err) {
     data = { body: e.data ? e.data.text() : '' };
+  }
+  if (data.type === 'touch' || data.type === 'buzz') {
+    e.waitUntil(touchPush(data));
+    return;
   }
   const title = data.title || 'একসাথে দ্বীনের পথে';
   e.waitUntil(

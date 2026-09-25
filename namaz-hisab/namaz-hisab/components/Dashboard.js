@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import PageHead from './PageHead';
-import { StarIcon } from './Icons';
+import DrawPad from './DrawPad';
+import { HeartIcon, PenIcon, StarIcon, VibrateIcon } from './Icons';
 import { bnNum } from '../lib/store';
-import { getDashboard } from '../lib/cloud';
+import { getDashboard, getTouchStatus, sendBuzz } from '../lib/cloud';
 
 function Bar({ value, max, tone }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
@@ -37,6 +38,75 @@ function Row({ label, a, b, max, tone, unit }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/* ---------- স্পর্শ: সঙ্গীর স্ক্রিনে আঁকা, ফোন কাঁপানো ---------- */
+
+function TouchCard({ partnerName }) {
+  const [info, setInfo] = useState(null);
+  const [pad, setPad] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState({ tone: '', text: '' });
+
+  useEffect(() => {
+    getTouchStatus()
+      .then((d) => setInfo(d.partner || null))
+      .catch(() => {});
+  }, []);
+
+  const name = (info && info.name) || partnerName;
+  // সঙ্গী নিজের সেটিংসে বন্ধ রাখলে বোতামও বন্ধ
+  const canDraw = !info || info.draw;
+  const canBuzz = !info || info.buzz;
+
+  async function buzz() {
+    setBusy(true);
+    setNote({ tone: '', text: '' });
+    try {
+      const r = await sendBuzz();
+      setNote(
+        r.sent > 0
+          ? { tone: 'good', text: `${name}-এর ফোনে পাঠানো হলো` }
+          : { tone: 'warn', text: `${name}-এর ফোনে নোটিফিকেশন পৌঁছাচ্ছে না — অ্যাপ খুললে জানবেন` }
+      );
+    } catch (err) {
+      setNote({ tone: 'bad', text: err.message || 'পাঠানো গেল না' });
+    }
+    setBusy(false);
+  }
+
+  return (
+    <section className="touch-card">
+      <div className="touch-head">
+        <HeartIcon size={16} filled />
+        <b>{name}-কে ছুঁয়ে দিন</b>
+      </div>
+      <p>
+        আপনি আঁকবেন, সাথে সাথে {name}-এর স্ক্রিনে ফুটে উঠবে। আর এক চাপে তার ফোন
+        কাঁপিয়ে জানান দিতে পারেন।
+      </p>
+      <div className="touch-actions">
+        <button type="button" className="btn primary" disabled={!canDraw} onClick={() => setPad(true)}>
+          <PenIcon size={17} /> আঁকুন
+        </button>
+        <button type="button" className="btn" disabled={!canBuzz || busy} onClick={buzz}>
+          <VibrateIcon size={17} /> কাঁপান
+        </button>
+      </div>
+
+      {info && info.devices === 0 ? (
+        <p className="touch-note warn">
+          {name}-এর ফোনে নোটিফিকেশন চালু নেই। উনি সেটিংস থেকে চালু করলে তবেই সাথে সাথে পৌঁছাবে —
+          নইলে ১৫ মিনিটের মধ্যে অ্যাপ খুললে দেখবেন।
+        </p>
+      ) : null}
+      {info && !info.draw ? <p className="touch-note">{name} স্ক্রিনে আঁকা বন্ধ রেখেছেন।</p> : null}
+      {info && !info.buzz ? <p className="touch-note">{name} ফোন কাঁপানো বন্ধ রেখেছেন।</p> : null}
+      {note.text ? <p className={'touch-note ' + note.tone}>{note.text}</p> : null}
+
+      {pad ? <DrawPad partner={name} onClose={() => setPad(false)} /> : null}
+    </section>
   );
 }
 
@@ -93,6 +163,8 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {p ? <TouchCard partnerName={p.name} /> : null}
 
       {!p ? (
         <div className="empty-note" style={{ marginTop: 4 }}>

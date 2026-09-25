@@ -158,6 +158,8 @@ export default function SettingsSheet({ onClose }) {
   const [city, setCity] = useState(DEFAULT_PLACE.city);
   const [notifyPrayer, setNotifyPrayer] = useState(false);
   const [notifyQuran, setNotifyQuran] = useState(false);
+  const [touchDraw, setTouchDraw] = useState(true);
+  const [touchBuzz, setTouchBuzz] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -182,6 +184,8 @@ export default function SettingsSheet({ onClose }) {
           setCity(d.city || DEFAULT_PLACE.city);
           setNotifyPrayer(Boolean(d.notifyPrayer));
           setNotifyQuran(Boolean(d.notifyQuran));
+          setTouchDraw(d.touchDraw !== false);
+          setTouchBuzz(d.touchBuzz !== false);
         }
       })
       .catch(() => {});
@@ -215,6 +219,8 @@ export default function SettingsSheet({ onClose }) {
           lng: place.lng,
           notifyPrayer,
           notifyQuran,
+          touchDraw,
+          touchBuzz,
         }),
       });
       const d = await res.json();
@@ -317,6 +323,32 @@ export default function SettingsSheet({ onClose }) {
 
         <div className="section-title">সঙ্গী</div>
         <PairBox onChanged={refresh} />
+
+        {/* সঙ্গী আমার ফোনে কী করতে পারবে — ফোন যার, ঠিক করবে সে-ই */}
+        <div className="section-title">স্পর্শ</div>
+        <button type="button" className="toggle-row" onClick={() => setTouchDraw((v) => !v)}>
+          <span>
+            সঙ্গী আমার স্ক্রিনে আঁকতে পারবে
+            <small>অ্যাপ খোলা থাকলে সাথে সাথে ফুটে উঠবে, না থাকলে নোটিফিকেশন আসবে</small>
+          </span>
+          <span className={'switch' + (touchDraw ? ' on' : '')} aria-hidden="true">
+            <span />
+          </span>
+        </button>
+        <button type="button" className="toggle-row" onClick={() => setTouchBuzz((v) => !v)}>
+          <span>
+            সঙ্গী আমার ফোন কাঁপাতে পারবে
+            <small>ফোন পুরো silent থাকলে কাঁপবে না — vibrate মোডে রাখুন</small>
+          </span>
+          <span className={'switch' + (touchBuzz ? ' on' : '')} aria-hidden="true">
+            <span />
+          </span>
+        </button>
+        {push.can && !push.on ? (
+          <p className="hint touch-hint">
+            সঙ্গীর আঁকা বা ডাক সাথে সাথে পেতে নিচে &ldquo;এই ডিভাইসে নোটিফিকেশন&rdquo; চালু করুন।
+          </p>
+        ) : null}
 
         <div className="section-title">পয়েন্টের নিয়ম</div>
         <div className="rules">

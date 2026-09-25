@@ -151,6 +151,34 @@ export function ensureSchema() {
           primary key (user_id, day, kind, item)
         )
       `,
+      // স্পর্শ — সঙ্গীর স্ক্রিনে আঁকা আর তার ফোন কাঁপানো। যার ফোন, সে-ই ঠিক
+      // করে সঙ্গী এগুলো করতে পারবে কি না।
+      sql`alter table nh_users add column if not exists touch_draw boolean not null default true`,
+      sql`alter table nh_users add column if not exists touch_buzz boolean not null default true`,
+      // একটা আঁকা বা একটা ডাক। seen_at — প্রাপক দেখেছে কি না; পুশ হারিয়ে
+      // গেলেও অ্যাপ খুললে না-দেখা আঁকাটা দেখিয়ে দেওয়া যায়।
+      sql`
+        create table if not exists nh_touch (
+          id          bigserial primary key,
+          from_id     bigint not null references nh_users(id) on delete cascade,
+          to_id       bigint not null references nh_users(id) on delete cascade,
+          kind        text not null,
+          aspect      real not null default 2,
+          done        boolean not null default false,
+          seen_at     timestamptz,
+          created_at  timestamptz not null default now()
+        )
+      `,
+      sql`create index if not exists nh_touch_to on nh_touch(to_id, id desc)`,
+      // আঁকাটা টুকরো টুকরো করে আসে, আঁকার সাথে সাথে — seq ধরে সাজানো
+      sql`
+        create table if not exists nh_touch_part (
+          touch_id  bigint not null references nh_touch(id) on delete cascade,
+          seq       int not null,
+          data      jsonb not null,
+          primary key (touch_id, seq)
+        )
+      `,
     ]);
   })().catch((err) => {
     ready = null;

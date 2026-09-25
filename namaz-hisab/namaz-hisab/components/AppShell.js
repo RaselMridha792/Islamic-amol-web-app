@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useAuth } from './AuthProvider';
 import PasswordField from './PasswordField';
 import Preloader from './Preloader';
+import TouchLayer from './TouchLayer';
 import {
   BookIcon,
   CrescentIcon,
@@ -179,6 +180,7 @@ export default function AppShell({ children }) {
     <>
       {children}
       <BottomNav />
+      <TouchLayer />
     </>
   );
 }

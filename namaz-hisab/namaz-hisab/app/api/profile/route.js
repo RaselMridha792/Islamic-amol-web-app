@@ -14,7 +14,7 @@ export async function GET(req) {
     const [rows, me] = await Promise.all([
       sql`select people from nh_profile where user_id = ${gate.user.id} limit 1`,
       sql`
-        select city, lat, lng, notify_prayer, notify_quran
+        select city, lat, lng, notify_prayer, notify_quran, touch_draw, touch_buzz
         from nh_users where id = ${gate.user.id} limit 1
       `,
     ]);
@@ -27,6 +27,8 @@ export async function GET(req) {
       city: u.city || DEFAULT_PLACE.city,
       notifyPrayer: Boolean(u.notify_prayer),
       notifyQuran: Boolean(u.notify_quran),
+      touchDraw: u.touch_draw !== false,
+      touchBuzz: u.touch_buzz !== false,
     });
   } catch (err) {
     return fail('তথ্য আনা গেল না', 503);
@@ -58,7 +60,9 @@ export async function POST(req) {
         lat = ${lat},
         lng = ${lng},
         notify_prayer = ${body.notifyPrayer === true},
-        notify_quran = ${body.notifyQuran === true}
+        notify_quran = ${body.notifyQuran === true},
+        touch_draw = ${body.touchDraw !== false},
+        touch_buzz = ${body.touchBuzz !== false}
       where id = ${gate.user.id}
     `;
     await sql`
