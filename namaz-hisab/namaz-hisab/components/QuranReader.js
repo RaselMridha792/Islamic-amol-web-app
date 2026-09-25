@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import PageHead from './PageHead';
 import JuzReader from './JuzReader';
 import { BookIcon, ChevronIcon, CheckIcon, LayersIcon, ListIcon, PlayIcon, PauseIcon, SpinIcon } from './Icons';
@@ -12,6 +13,18 @@ import { bnNum } from '../lib/store';
 import { getQuran, getQuranJuz, markQuran } from '../lib/cloud';
 
 const EMPTY_SUMMARY = { ayahs: 0, juzDone: 0, juzTotal: 30, juz: [], bySurah: {} };
+
+// শেখার পাঠ আর ভিডিও কেবল ওই ট্যাব খুললেই নামে — যিনি শুধু পড়তে এসেছেন,
+// তাঁর ফোনে পাঠের লেখা বা ইউটিউবের কোড আগেভাগে নামানোর দরকার নেই
+const Opening = () => <div className="empty-note">খোলা হচ্ছে…</div>;
+const QuranLessons = dynamic(() => import('./QuranLessons'), { loading: Opening });
+const QuranVideos = dynamic(() => import('./QuranVideos'), { loading: Opening });
+
+const TABS = [
+  { id: 'read', name: 'পড়ুন' },
+  { id: 'learn', name: 'শিখুন' },
+  { id: 'video', name: 'ভিডিও' },
+];
 
 // একবারে কয়টা আয়াত পাতায় বসবে। বাকারায় ২৮৬টা — সব একসাথে বসালে কম শক্তির
 // ফোনে পাতাটা খুলতেই দেরি হয়ে যায়।
@@ -486,6 +499,8 @@ export default function QuranReader() {
   const [openJuz, setOpenJuz] = useState(null);
   const [juzMarks, setJuzMarks] = useState({});
   const [view, setView] = useState('surah');
+  const [tab, setTab] = useState('read');
+  const [lesson, setLesson] = useState(null);
   const [readAyahs, setReadAyahs] = useState([]);
   const [readBySurah, setReadBySurah] = useState({});
   const [busy, setBusy] = useState(false);
@@ -653,70 +668,93 @@ export default function QuranReader() {
 
   return (
     <main className="shell">
-      <PageHead title="কুরআন" sub="পড়ুন আর কতটুকু হলো দেখুন" />
-      <Progress summary={summary} />
-      <QariPicker qari={qari} onChange={changeQari} />
-      {msg ? <div className="auth-error">{msg}</div> : null}
+      <PageHead title="কুরআন" sub="পড়ুন, সহীহভাবে শিখুন, হিসাব রাখুন" />
 
-      {!open && !openJuz ? (
-        <div className="pickbar" role="tablist" aria-label="কীভাবে দেখবেন">
+      <div className="who-tabs three" role="tablist" aria-label="কুরআনের পাতা">
+        {TABS.map((t) => (
           <button
+            key={t.id}
             type="button"
             role="tab"
-            aria-selected={view === 'surah'}
-            className={'pickbar-btn' + (view === 'surah' ? ' on' : '')}
-            onClick={() => setView('surah')}
+            aria-selected={tab === t.id}
+            className={'who-tab' + (tab === t.id ? ' on' : '')}
+            onClick={() => setTab(t.id)}
           >
-            <BookIcon size={16} />
-            সুরা
-            <em>{bnNum(114)}</em>
+            {t.name}
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'juz'}
-            className={'pickbar-btn' + (view === 'juz' ? ' on' : '')}
-            onClick={() => setView('juz')}
-          >
-            <LayersIcon size={16} />
-            পারা
-            <em>{bnNum(30)}</em>
-          </button>
-        </div>
+        ))}
+      </div>
+
+      {tab === 'learn' ? <QuranLessons open={lesson} onOpen={setLesson} /> : null}
+      {tab === 'video' ? <QuranVideos /> : null}
+
+      {tab === 'read' ? (
+        <>
+          <Progress summary={summary} />
+          <QariPicker qari={qari} onChange={changeQari} />
+          {msg ? <div className="auth-error">{msg}</div> : null}
+
+          {!open && !openJuz ? (
+            <div className="pickbar" role="tablist" aria-label="কীভাবে দেখবেন">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'surah'}
+                className={'pickbar-btn' + (view === 'surah' ? ' on' : '')}
+                onClick={() => setView('surah')}
+              >
+                <BookIcon size={16} />
+                সুরা
+                <em>{bnNum(114)}</em>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'juz'}
+                className={'pickbar-btn' + (view === 'juz' ? ' on' : '')}
+                onClick={() => setView('juz')}
+              >
+                <LayersIcon size={16} />
+                পারা
+                <em>{bnNum(30)}</em>
+              </button>
+            </div>
+          ) : null}
+
+          {openJuz ? (
+            <JuzReader
+              juz={openJuz}
+              qari={qari}
+              marks={juzMarks}
+              busy={busy}
+              onBack={() => setOpenJuz(null)}
+              onGo={goJuz}
+              onToggle={(surah, ayah, read) => applyJuz(surah, [ayah], read)}
+              onWholeJuz={applyWholeJuz}
+            />
+          ) : open ? (
+            <SurahView
+              id={open}
+              qari={qari}
+              onBack={() => setOpen(null)}
+              onGo={goSurah}
+              readAyahs={readAyahs}
+              busy={busy}
+              onToggle={(ayah, read) => apply([ayah], read)}
+              onWholeSurah={(read) =>
+                apply(
+                  Array.from({ length: SURAHS[open - 1].ayahs }, (_, i) => i + 1),
+                  read
+                )
+              }
+            />
+          ) : view === 'juz' ? (
+            <JuzList onOpen={goSurah} onRead={goJuz} summary={summary} />
+          ) : (
+            <SurahList onOpen={goSurah} readBySurah={readBySurah} />
+          )}
+        </>
       ) : null}
-
-      {openJuz ? (
-        <JuzReader
-          juz={openJuz}
-          qari={qari}
-          marks={juzMarks}
-          busy={busy}
-          onBack={() => setOpenJuz(null)}
-          onGo={goJuz}
-          onToggle={(surah, ayah, read) => applyJuz(surah, [ayah], read)}
-          onWholeJuz={applyWholeJuz}
-        />
-      ) : open ? (
-        <SurahView
-          id={open}
-          qari={qari}
-          onBack={() => setOpen(null)}
-          onGo={goSurah}
-          readAyahs={readAyahs}
-          busy={busy}
-          onToggle={(ayah, read) => apply([ayah], read)}
-          onWholeSurah={(read) =>
-            apply(
-              Array.from({ length: SURAHS[open - 1].ayahs }, (_, i) => i + 1),
-              read
-            )
-          }
-        />
-      ) : view === 'juz' ? (
-        <JuzList onOpen={goSurah} onRead={goJuz} summary={summary} />
-      ) : (
-        <SurahList onOpen={goSurah} readBySurah={readBySurah} />
-      )}
     </main>
   );
 }
