@@ -30,7 +30,30 @@ fi
 
 docker compose up -d db
 docker compose stop app cron backup 2>/dev/null || true
-until docker compose exec -T db pg_isready -U deen -d deen -q; do sleep 1; done
+
+# `pg_isready` নয় — একটা সত্যিকারের কোয়েরি।
+#
+# নতুন সার্ভারে প্রথমবার ভলিউমটা খালি থাকে, আর Postgres তখন নিজের প্রথম
+# গোছগাছ করে: সেই সময় সে একটা অস্থায়ী সকেটে চলে, বাইরেরটা তখনো নেই।
+# pg_isready ওই অবস্থাতেও "প্রস্তুত" বলে দেয়, আর ঠিক পরের লাইনের pg_restore
+# গিয়ে পায় —
+#   connection to server on socket "/var/run/postgresql/.s.PGSQL.5432"
+#   failed: No such file or directory
+# — ২৬ সেপ্টেম্বর ২০২৬-এ VPS-এ প্রথম restore এভাবেই ব্যর্থ হয়েছিল, আর ব্যর্থ
+# হয়েও স্ক্রিপ্টটা শেষ পর্যন্ত চলে গিয়ে খালি ডেটাবেসের উপর অ্যাপ তুলে দিয়েছিল।
+#
+# `select 1` ঠিক সেই প্রশ্নটাই করে যেটা pg_restore-এর দরকার: একজন ক্লায়েন্ট
+# কি এখন সংযোগ করে কিছু চালাতে পারে? পারলে হ্যাঁ, না পারলে অপেক্ষা।
+tries=0
+until docker compose exec -T db psql -U deen -d deen -Atc 'select 1' >/dev/null 2>&1; do
+  tries=$((tries + 1))
+  if [ "$tries" -gt 120 ]; then
+    echo "ডেটাবেস দুই মিনিটেও সাড়া দিল না। থামছি — কিছু মোছা হয়নি।"
+    echo "দেখুন:  docker compose logs --tail 30 db"
+    exit 1
+  fi
+  sleep 1
+done
 
 docker compose exec -T db pg_restore -U deen -d deen \
   --clean --if-exists --no-owner --no-privileges --exit-on-error "/backups/$file"
