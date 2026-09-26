@@ -10,20 +10,23 @@ import { useAuth } from './AuthProvider';
 import InstallButton from './InstallButton';
 import Preloader from './Preloader';
 import { ChevronIcon, CloudIcon } from './Icons';
-import { PRAYERS, STATUS_MAP, dayTotal, dayFilled } from '../lib/prayers';
+import { PRAYERS, STATUS_MAP, dayTotal, dayFilled, isAutoMissed, withAutoMissed } from '../lib/prayers';
 import { playSound, warmUpAudio } from '../lib/sound';
-import { mergeRecords, pullAll, pushChanges } from '../lib/cloud';
+import { getSettle, mergeRecords, pullAll, pushChanges, setSettle } from '../lib/cloud';
 import {
   bnNum,
   formatDate,
   formatDayName,
+  formatYm,
   loadMeta,
+  loadMissedFrom,
   loadPartnerCache,
   loadPhotoCache,
   loadRecords,
   loadSoundOn,
   saveMeCache,
   saveMeta,
+  saveMissedFrom,
   savePartnerCache,
   savePhotoCache,
   saveRecords,
@@ -45,6 +48,11 @@ export default function PrayerApp() {
   const [soundOn, setSoundOn] = useState(true);
   const [sync, setSync] = useState('syncing');
   const [toasts, setToasts] = useState([]);
+  // কোন দিন থেকে "দিন পেরোলে না-লেখা = পড়েনি" (সার্ভার বলে দেয়)
+  const [missedFrom, setMissedFrom] = useState(null);
+  // মাস শেষে জরিমানা মেটানোর হিসাব (সার্ভারে গোনা)
+  const [settle, setSettleState] = useState(null);
+  const [monthReq, setMonthReq] = useState(null);
   const monthRef = useRef(null);
   const timers = useRef([]);
 
@@ -89,6 +97,13 @@ export default function PrayerApp() {
 
   /* ---------- সার্ভারের সাথে মেলানো ---------- */
 
+  // জরিমানা মেটানোর হিসাব দুজনের খাতার উপর নির্ভর করে, তাই খাতা মেলার পরে আনি
+  const loadSettle = useCallback(() => {
+    getSettle()
+      .then((d) => setSettleState(d && d.paired ? d : null))
+      .catch(() => {});
+  }, []);
+
   const flushPush = useCallback(async () => {
     if (pendingRef.current.size === 0) return;
     const keys = Array.from(pendingRef.current);
@@ -102,12 +117,13 @@ export default function PrayerApp() {
     try {
       await pushChanges({ days });
       setSync('ok');
+      loadSettle();
     } catch (err) {
       // পাঠানো না গেলে সারিতে ফিরিয়ে রাখি, পরের বার যাবে
       keys.forEach((k) => pendingRef.current.add(k));
       setSync('error');
     }
-  }, []);
+  }, [loadSettle]);
 
   const queueDay = useCallback(
     (key) => {
@@ -133,15 +149,19 @@ export default function PrayerApp() {
       setRecords(merged.records);
       setPartner(remote.partner || null);
       savePartnerCache(remote.partner || null);
+      setMissedFrom(remote.missedFrom || null);
+      saveMissedFrom(remote.missedFrom || null);
 
       if (merged.toPush.length) await pushChanges({ days: merged.toPush });
       setSync('ok');
+      if (remote.partner) loadSettle();
+      else setSettleState(null);
     } catch (err) {
       setSync('error');
     } finally {
       busyRef.current = false;
     }
-  }, []);
+  }, [loadSettle]);
 
   useEffect(() => {
     const r = loadRecords();
@@ -150,6 +170,7 @@ export default function PrayerApp() {
     setRecords(r);
     // জমানো কপি দিয়ে সাথে সাথে দেখাই, তারপর সার্ভারের টাটকাটা এসে বসবে
     setPartner(loadPartnerCache());
+    setMissedFrom(loadMissedFrom());
     setPhoto(loadPhotoCache());
     setSoundOn(loadSoundOn());
     setDateKey(todayKey());
@@ -176,13 +197,18 @@ export default function PrayerApp() {
 
   /* ---------- এই দিনের হিসাব ---------- */
 
-  const mine = records[dateKey] || EMPTY;
-  const theirs = partner && partner.days ? partner.days[dateKey] || EMPTY : EMPTY;
-  const isToday = dateKey === todayKey();
+  // যা লেখা আছে, আর দিন পেরিয়ে গেলে না-লেখাগুলো "পড়েনি" বসানো কপি (lib/prayers.js)
+  const today = todayKey();
+  const partnerFrom = partner ? partner.missedFrom || null : null;
+  const stored = records[dateKey] || EMPTY;
+  const storedTheirs = partner && partner.days ? partner.days[dateKey] || EMPTY : EMPTY;
+  const mine = withAutoMissed(stored, dateKey, today, missedFrom) || EMPTY;
+  const theirs = withAutoMissed(storedTheirs, dateKey, today, partnerFrom) || EMPTY;
+  const isToday = dateKey === today;
 
   const myTotal = useMemo(() => dayTotal(mine), [mine]);
   const theirTotal = useMemo(() => dayTotal(theirs), [theirs]);
-  const filled = dayFilled(mine);
+  const filled = dayFilled(stored);
 
   const handlePick = useCallback(
     (prayerId, statusId) => {
@@ -191,7 +217,9 @@ export default function PrayerApp() {
       const status = STATUS_MAP[statusId];
 
       const base = recordsRef.current[dateKey] || EMPTY;
-      const undo = base[prayerId] === statusId;
+      // নিজে থেকে বসা "পড়েনি"-তে আবার "পড়েনি" চাপলে সেটা লিখে রাখি, মুছি না
+      const auto = isAutoMissed(base, prayerId, dateKey, todayKey(), missedFrom);
+      const undo = !auto && base[prayerId] === statusId;
       const nextDay = { ...base };
       if (undo) delete nextDay[prayerId];
       else nextDay[prayerId] = statusId;
@@ -207,10 +235,13 @@ export default function PrayerApp() {
 
       if (undo) {
         playSound('clear', soundOn);
+        const passed = isAutoMissed(nextDay, prayerId, dateKey, todayKey(), missedFrom);
         pushToast({
           tone: 'info',
           title: prayer.bn + ' আবার খালি',
-          body: 'এই ওয়াক্তের হিসাব মুছে দেওয়া হলো',
+          body: passed
+            ? 'লেখা মুছে দেওয়া হলো — দিন পেরিয়ে গেছে, তাই পড়েনি ধরা হবে'
+            : 'এই ওয়াক্তের হিসাব মুছে দেওয়া হলো',
         });
         return;
       }
@@ -234,8 +265,35 @@ export default function PrayerApp() {
         });
       }
     },
-    [dateKey, pushToast, queueDay, soundOn]
+    [dateKey, missedFrom, pushToast, queueDay, soundOn]
   );
+
+  // আগের কোনো মাসের জরিমানা মেটানো হলো / বাতিল
+  const handleSettle = useCallback(
+    async (month, paid) => {
+      try {
+        const d = await setSettle(month, paid);
+        setSettleState(d && d.paired ? d : null);
+        playSound(paid ? 'prayed' : 'clear', soundOn);
+        pushToast(
+          paid
+            ? { tone: 'good', title: formatYm(month) + ' মিটে গেল', body: 'পরিশোধিত লেখা হলো' }
+            : { tone: 'info', title: formatYm(month) + ' আবার বাকি', body: 'পরিশোধ বাতিল করা হলো' }
+        );
+      } catch (err) {
+        pushToast({ tone: 'bad', title: 'হলো না', body: err.message || 'আবার চেষ্টা করুন' });
+      }
+    },
+    [pushToast, soundOn]
+  );
+
+  // কে কাকে দেবেন — নাম বসিয়ে
+  const oweText = (payer, amount) => {
+    if (!settle || !payer) return '';
+    const from = payer === 'me' ? me.name : settle.partner.name;
+    const to = payer === 'me' ? settle.partner.name : me.name;
+    return `${from} ${to}-কে ৳${bnNum(amount)} দেবেন`;
+  };
 
   function goDay(delta) {
     const next = shiftDay(dateKey, delta);
@@ -318,6 +376,25 @@ export default function PrayerApp() {
           <InstallButton />
         </div>
 
+        {settle && settle.due && settle.due.months.length ? (
+          <button
+            type="button"
+            className="due-banner"
+            onClick={() => {
+              setMonthReq({ ym: settle.due.months[settle.due.months.length - 1], at: Date.now() });
+              if (monthRef.current) monthRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            <b>জরিমানা বাকি · {settle.due.months.map(formatYm).join(', ')}</b>
+            <span>
+              {settle.due.payer
+                ? oweText(settle.due.payer, settle.due.amount)
+                : 'দুদিকে সমান — দেখে নিয়ে মিটিয়ে দিন'}
+              {' '}· দেখতে চাপুন
+            </span>
+          </button>
+        ) : null}
+
         {!partner ? (
           <div className="empty-note" style={{ marginTop: 12 }}>
             সঙ্গীর সাথে জোড়া বাঁধেননি। সেটিংসে গিয়ে কোড দিয়ে জোড়া বাঁধলে একে অপরের হিসাব দেখতে
@@ -334,6 +411,8 @@ export default function PrayerApp() {
               partner={partnerPerson}
               mine={mine}
               theirs={theirs}
+              mineAuto={isAutoMissed(stored, prayer.id, dateKey, today, missedFrom)}
+              theirsAuto={Boolean(partner) && isAutoMissed(storedTheirs, prayer.id, dateKey, today, partnerFrom)}
               onPick={handlePick}
             />
           ))}
@@ -344,6 +423,10 @@ export default function PrayerApp() {
             records={records}
             partner={partner}
             meName={me.name}
+            missedFrom={missedFrom}
+            settle={settle}
+            onSettle={handleSettle}
+            monthReq={monthReq}
             dateKey={dateKey}
             onSelectDay={(k) => {
               setDateKey(k);

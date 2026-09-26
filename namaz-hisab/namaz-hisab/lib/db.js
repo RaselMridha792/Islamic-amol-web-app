@@ -250,6 +250,29 @@ export function ensureSchema() {
           primary key (touch_id, seq)
         )
       `,
+      // কোন দিন থেকে "দিন পেরোলে না-লেখা ওয়াক্ত = পড়েনি" খাটে (lib/prayers.js)।
+      // default-টা একবারই হিসাব হয়: যাঁরা আগে থেকে আছেন তাঁদের জন্য এই কলাম
+      // যোগ হওয়ার দিন (ঢাকার তারিখে) — তাই পেছনের মাসের জরিমানা হঠাৎ বাড়ে না;
+      // নতুন যিনি আসবেন, তাঁর জন্য তাঁর আসার দিন।
+      sql`
+        alter table nh_users add column if not exists missed_from date
+          not null default ((now() at time zone 'Asia/Dhaka')::date)
+      `,
+      // মাসের জরিমানা মেটানো — জোড়ার দুজনের জন্য একটাই সারি (ছোট আইডি আগে)।
+      // পরিশোধের মুহূর্তের হিসাবটা রেখে দিই, পরে কোনো দিনের হিসাব বদলালে যাতে
+      // বোঝা যায় আবার মেলাতে হবে।
+      sql`
+        create table if not exists nh_settle (
+          user_a    bigint not null references nh_users(id) on delete cascade,
+          user_b    bigint not null references nh_users(id) on delete cascade,
+          month     text not null,
+          payer_id  bigint references nh_users(id) on delete cascade,
+          amount    int not null,
+          paid_by   bigint not null references nh_users(id) on delete cascade,
+          paid_at   timestamptz not null default now(),
+          primary key (user_a, user_b, month)
+        )
+      `,
     ]);
   })().catch((err) => {
     ready = null;

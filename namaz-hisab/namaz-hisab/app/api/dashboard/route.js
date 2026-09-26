@@ -3,7 +3,7 @@ import { db } from '../../../lib/db';
 import { fail, requireUser, todayKey } from '../../../lib/api';
 import { POINTS } from '../../../lib/points';
 import { JUZ_RANGE } from '../../../lib/quranMeta';
-import { PRAYERS, dayCounts, dayTotal } from '../../../lib/prayers';
+import { PRAYERS, monthSummary } from '../../../lib/prayers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,19 +50,16 @@ async function statsFor(sql, user, day) {
     tick[key + 'Today'] += r.n_today;
   });
 
-  // নামাজ: এ মাসের জরিমানা আর আজ কয় ওয়াক্ত লেখা হয়েছে
-  let monthFine = 0;
-  const monthCount = { prayed: 0, qaza: 0, missed: 0 };
+  // নামাজ: এ মাসের জরিমানা আর আজ কয় ওয়াক্ত লেখা হয়েছে। পেরিয়ে যাওয়া দিনের
+  // না-লেখা ওয়াক্ত "পড়েনি" ধরা হয় — নামাজের খাতায় যেমন (lib/prayers.js)
+  const byDay = {};
   let todayFilled = 0;
   days.forEach((r) => {
     const rec = r.data || {};
-    monthFine += dayTotal(rec);
-    const c = dayCounts(rec);
-    monthCount.prayed += c.prayed;
-    monthCount.qaza += c.qaza;
-    monthCount.missed += c.missed;
+    byDay[r.day] = rec;
     if (r.day === day) todayFilled = PRAYERS.filter((p) => rec[p.id]).length;
   });
+  const { fine: monthFine, counts: monthCount } = monthSummary(byDay, month, day, user.missed_from);
 
   const pointsToday =
     quiz[0].n * POINTS.quiz + tick.duaToday * POINTS.dua + tick.amolToday * POINTS.amol;
@@ -94,7 +91,8 @@ export async function GET(req) {
     const sql = db();
     // নিজের আর শুধু নিজের সঙ্গীর সারি — আর কারও নয়
     const rows = await sql`
-      select u.id, u.username, u.display_name, u.partner_id
+      select u.id, u.username, u.display_name, u.partner_id,
+             to_char(u.missed_from, 'YYYY-MM-DD') as missed_from
       from nh_users u where u.id = ${gate.user.id} limit 1
     `;
     const me = rows[0];
@@ -103,7 +101,8 @@ export async function GET(req) {
     let partnerRow = null;
     if (me.partner_id) {
       const p = await sql`
-        select id, username, display_name from nh_users where id = ${me.partner_id} limit 1
+        select id, username, display_name, to_char(missed_from, 'YYYY-MM-DD') as missed_from
+        from nh_users where id = ${me.partner_id} limit 1
       `;
       partnerRow = p[0] || null;
     }

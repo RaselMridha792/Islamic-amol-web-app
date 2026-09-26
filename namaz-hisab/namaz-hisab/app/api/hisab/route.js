@@ -27,10 +27,13 @@ export async function GET(req) {
   if (gate.error) return gate.error;
 
   try {
+    // missed_from নতুন কলাম — deploy-এর পর প্রথম ডাক এটা হলেও যেন থাকে
+    await ensureSchema();
     const sql = db();
-    const [dayRows, profRows] = await Promise.all([
+    const [dayRows, profRows, meRows] = await Promise.all([
       sql`select to_char(day, 'YYYY-MM-DD') as day, data, updated_at from nh_days where user_id = ${gate.user.id}`,
       sql`select people, updated_at from nh_profile where user_id = ${gate.user.id} limit 1`,
+      sql`select to_char(missed_from, 'YYYY-MM-DD') as missed_from from nh_users where id = ${gate.user.id}`,
     ]);
 
     const days = {};
@@ -50,7 +53,10 @@ export async function GET(req) {
           select to_char(day, 'YYYY-MM-DD') as day, data from nh_days
           where user_id = ${gate.user.partnerId}
         `,
-        sql`select username, display_name from nh_users where id = ${gate.user.partnerId} limit 1`,
+        sql`
+          select username, display_name, to_char(missed_from, 'YYYY-MM-DD') as missed_from
+          from nh_users where id = ${gate.user.partnerId} limit 1
+        `,
         sql`select people from nh_profile where user_id = ${gate.user.partnerId} limit 1`,
       ]);
       const pDays = {};
@@ -59,10 +65,13 @@ export async function GET(req) {
         name: pUser[0] ? pUser[0].display_name || pUser[0].username : 'সঙ্গী',
         photo: (pProf[0] && pProf[0].people && pProf[0].people.photo) || '',
         days: pDays,
+        missedFrom: pUser[0] ? pUser[0].missed_from : null,
       };
     }
 
-    return NextResponse.json({ days, profile: prof, partner });
+    // missedFrom: কোন দিন থেকে "দিন পেরোলে না-লেখা = পড়েনি" (lib/prayers.js)
+    const missedFrom = meRows[0] ? meRows[0].missed_from : null;
+    return NextResponse.json({ days, profile: prof, partner, missedFrom });
   } catch (err) {
     return NextResponse.json({ error: 'খাতা আনা গেল না' }, { status: 503 });
   }

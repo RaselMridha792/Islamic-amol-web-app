@@ -125,6 +125,19 @@ export function firstWeekdayOf(ym) {
 
 export const BN_DAYS_SHORT = ['রবি', 'সোম', 'মঙ্গ', 'বুধ', 'বৃহ', 'শুক', 'শনি'];
 
+/* ---------- কোন দিন থেকে "দিন পেরোলে না-লেখা = পড়েনি" ---------- */
+// সার্ভার থেকে আসে; রেখে দিই যাতে অ্যাপ খোলার সাথে সাথেই ঠিক হিসাব দেখায়
+
+const KEY_MISSED_FROM = 'namaz-hisab:missed-from:v1';
+
+export function loadMissedFrom() {
+  return read(KEY_MISSED_FROM, null);
+}
+
+export function saveMissedFrom(day) {
+  write(KEY_MISSED_FROM, day || null);
+}
+
 /* ---------- ক্লাউডের সাথে মেলানোর তথ্য ---------- */
 
 const KEY_META = 'namaz-hisab:meta:v2';

@@ -3733,3 +3733,157 @@ html.lite .tj-hi {
     transform: scale(1.12);
   }
 }
+
+/* ================= দিন পেরোলে পড়েনি · মাস শেষের হিসাব · আমলের খাতা ================= */
+
+/* নিজে থেকে বসা "পড়েনি" — হাতে দেওয়াটার চেয়ে একটু হালকা, যাতে বোঝা যায় */
+.choice.on.auto {
+  border-style: dashed;
+  background: rgba(255, 92, 110, 0.08);
+}
+
+.auto-note {
+  margin: 6px 2px 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.seg.auto {
+  opacity: 0.55;
+}
+
+/* উপরের "জরিমানা বাকি" খবর */
+.due-banner {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 92, 110, 0.45);
+  background: rgba(255, 92, 110, 0.1);
+  color: var(--text);
+  text-align: left;
+}
+
+.due-banner b {
+  display: block;
+  font-size: 14px;
+  color: var(--bad);
+}
+
+.due-banner span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* মাসের হিসাব মেটানো */
+.settle {
+  margin: 12px 0 4px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.settle.due,
+.settle.changed {
+  border-color: rgba(255, 92, 110, 0.45);
+  background: rgba(255, 92, 110, 0.07);
+}
+
+.settle.paid {
+  border-color: rgba(53, 199, 154, 0.4);
+  background: rgba(53, 199, 154, 0.07);
+}
+
+.settle-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settle-head b {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.settle-pill {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.settle.due .settle-pill,
+.settle.changed .settle-pill {
+  background: rgba(255, 92, 110, 0.2);
+  color: var(--bad);
+}
+
+.settle.paid .settle-pill {
+  background: rgba(53, 199, 154, 0.2);
+  color: var(--good);
+}
+
+.settle p {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.settle p small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.settle .btn.wide {
+  margin-top: 10px;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pink-soft);
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* রাত ১২টার পরে — গতকালের খাতা */
+.late-chip {
+  border-color: rgba(231, 194, 125, 0.45);
+  color: var(--gold);
+}
+
+/* আমলের মাসের খাতা — যত বেশি, তত গাঢ় */
+.cal-cell.amol-l1 {
+  background: rgba(53, 199, 154, 0.1);
+}
+
+.cal-cell.amol-l2 {
+  background: rgba(53, 199, 154, 0.2);
+}
+
+.cal-cell.amol-l3 {
+  background: rgba(53, 199, 154, 0.32);
+}
+
+.cal-tk.amol-n {
+  color: var(--good);
+}
+
+.cal-cell.active.amol-l1,
+.cal-cell.active.amol-l2,
+.cal-cell.active.amol-l3 {
+  background: rgba(255, 61, 130, 0.16);
+}

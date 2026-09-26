@@ -5,8 +5,9 @@ import { MosqueIcon } from './Icons';
 import { STATUS_MAP, STATUSES, totalRakat } from '../lib/prayers';
 import { bnNum } from '../lib/store';
 
-// আমার দিক — এখানেই ট্যাপ করে হিসাব লেখা হয়
-function MySide({ me, chosen, onPick }) {
+// আমার দিক — এখানেই ট্যাপ করে হিসাব লেখা হয়।
+// auto: দিন পেরিয়েছে অথচ লেখা হয়নি, তাই "পড়েনি" ধরা — বদলানো যায়
+function MySide({ me, chosen, auto, onPick }) {
   return (
     <div className="side">
       <div className="side-head">
@@ -19,7 +20,7 @@ function MySide({ me, chosen, onPick }) {
           <button
             key={s.id}
             type="button"
-            className={'choice ' + s.tone + (on ? ' on' : '')}
+            className={'choice ' + s.tone + (on ? ' on' : '') + (on && auto ? ' auto' : '')}
             aria-pressed={on}
             onClick={() => onPick(s.id)}
           >
@@ -29,12 +30,15 @@ function MySide({ me, chosen, onPick }) {
           </button>
         );
       })}
+      {auto ? (
+        <p className="auto-note">লেখা হয়নি, দিন পেরিয়েছে — তাই পড়েনি ধরা হয়েছে। পড়ে থাকলে বদলে দিন।</p>
+      ) : null}
     </div>
   );
 }
 
 // সঙ্গীর দিক — শুধু দেখার, ট্যাপ করা যায় না
-function PartnerSide({ partner, chosen }) {
+function PartnerSide({ partner, chosen, auto }) {
   const s = chosen ? STATUS_MAP[chosen] : null;
   return (
     <div className="side">
@@ -47,11 +51,12 @@ function PartnerSide({ partner, chosen }) {
         <b>{s ? s.short : 'এখনো লেখেনি'}</b>
         {s ? <span className="cost">{s.fine === 0 ? '৳০' : '৳' + bnNum(s.fine)}</span> : null}
       </div>
+      {auto ? <p className="auto-note">লেখেনি — দিন পেরোনোয় পড়েনি ধরা</p> : null}
     </div>
   );
 }
 
-export default function PrayerCard({ prayer, me, partner, mine, theirs, onPick }) {
+export default function PrayerCard({ prayer, me, partner, mine, theirs, mineAuto, theirsAuto, onPick }) {
   return (
     <section className="card">
       <header className="card-head">
@@ -80,12 +85,17 @@ export default function PrayerCard({ prayer, me, partner, mine, theirs, onPick }
         <MySide
           me={me}
           chosen={mine ? mine[prayer.id] : undefined}
+          auto={mineAuto}
           onPick={(statusId) => onPick(prayer.id, statusId)}
         />
         {partner ? (
           <>
             <div className="split-line" />
-            <PartnerSide partner={partner} chosen={theirs ? theirs[prayer.id] : undefined} />
+            <PartnerSide
+              partner={partner}
+              chosen={theirs ? theirs[prayer.id] : undefined}
+              auto={theirsAuto}
+            />
           </>
         ) : null}
       </div>

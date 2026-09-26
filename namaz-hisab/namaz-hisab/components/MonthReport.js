@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PRAYERS, dayTotal, dayCounts } from '../lib/prayers';
+import { PRAYERS, dayTotal, dayCounts, withAutoMissed } from '../lib/prayers';
 import {
   BN_DAYS_SHORT,
   bnNum,
@@ -19,10 +19,110 @@ function emptyCounts() {
   return { prayed: 0, qaza: 0, missed: 0 };
 }
 
-export default function MonthReport({ records, partner, meName, dateKey, onSelectDay }) {
+/* ---------- মাস শেষে জরিমানা মেটানো ---------- */
+// সংখ্যাগুলো সার্ভারের (/api/settle) — দুজনের খাতা মিলিয়ে সেখানেই গোনা হয়।
+
+function SettleCard({ m, meName, partnerName, onSettle }) {
+  const [busy, setBusy] = useState(false);
+  const name = (x) => (x === 'me' ? meName : partnerName);
+  const other = (x) => (x === 'me' ? partnerName : meName);
+  const owe = (payer, amount) => `${name(payer)} ${other(payer)}-কে ৳${bnNum(amount)} দেবেন`;
+
+  async function run(paid) {
+    setBusy(true);
+    await onSettle(m.month, paid);
+    setBusy(false);
+  }
+
+  const paidOn = m.paid
+    ? new Date(m.paid.at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long' })
+    : '';
+
+  return (
+    <div className={'settle ' + m.status}>
+      <div className="settle-head">
+        <b>মাসের হিসাব মেটানো</b>
+        <span className="settle-pill">
+          {{ running: 'চলতি', due: 'বাকি', paid: 'পরিশোধিত', changed: 'আবার মেলাতে হবে', even: 'সমান' }[
+            m.status
+          ]}
+        </span>
+      </div>
+
+      {m.status === 'running' ? (
+        <p>
+          {m.payer ? <>এ পর্যন্ত: <b>{owe(m.payer, m.amount)}</b></> : 'এ পর্যন্ত দুজনের জরিমানা সমান'}
+          <small>মাস শেষ হলে চূড়ান্ত হবে, তারপর পরের মাস আবার শূন্য থেকে।</small>
+        </p>
+      ) : null}
+
+      {m.status === 'even' ? <p>দুজনের জরিমানা সমান — এই মাসে দেওয়া-নেওয়ার কিছু নেই।</p> : null}
+
+      {m.status === 'due' ? (
+        <>
+          <p>
+            <b>{owe(m.payer, m.amount)}</b>
+            <small>দেওয়া হয়ে গেলে নিচে চাপুন — দুজনের যে কেউ লিখতে পারেন।</small>
+          </p>
+          <button type="button" className="btn primary wide" disabled={busy} onClick={() => run(true)}>
+            পরিশোধ হয়েছে
+          </button>
+        </>
+      ) : null}
+
+      {m.status === 'paid' ? (
+        <p>
+          <b>{owe(m.payer, m.amount)}</b> — দেওয়া হয়ে গেছে।
+          <small>
+            {paidOn} · {name(m.paid.by)} লিখেছেন ·{' '}
+            <button type="button" className="link-btn" disabled={busy} onClick={() => run(false)}>
+              বাতিল করুন
+            </button>
+          </small>
+        </p>
+      ) : null}
+
+      {m.status === 'changed' ? (
+        <>
+          <p>
+            পরিশোধের পর এই মাসের কোনো দিনের হিসাব বদলেছে।
+            <small>
+              তখন লেখা হয়েছিল: {m.paid.payer ? owe(m.paid.payer, m.paid.amount) : 'কিছু দেওয়ার ছিল না'}।
+            </small>
+            <small>
+              এখন: <b>{m.payer ? owe(m.payer, m.amount) : 'দুজনের সমান'}</b>।
+            </small>
+          </p>
+          {m.amount > 0 ? (
+            <button type="button" className="btn primary wide" disabled={busy} onClick={() => run(true)}>
+              এখনকার হিসাবে পরিশোধ হয়েছে
+            </button>
+          ) : (
+            <button type="button" className="btn wide" disabled={busy} onClick={() => run(false)}>
+              পুরনো পরিশোধ মুছে দিন
+            </button>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export default function MonthReport({
+  records,
+  partner,
+  meName,
+  missedFrom,
+  settle,
+  onSettle,
+  monthReq,
+  dateKey,
+  onSelectDay,
+}) {
   // কোন মাস দেখছি তা আলাদা করে ধরে রাখি, উপরের তারিখ থেকে স্বাধীন
   const [anchor, setAnchor] = useState(() => ymOf(dateKey));
   const [seenDate, setSeenDate] = useState(dateKey);
+  const [seenReq, setSeenReq] = useState(monthReq);
   const [who, setWho] = useState('me');
 
   if (seenDate !== dateKey) {
@@ -30,13 +130,19 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
     setSeenDate(dateKey);
   }
 
+  // উপরের "বাকি" খবরে চাপ দিলে সেই মাসে চলে আসি
+  if (monthReq !== seenReq) {
+    if (monthReq && monthReq.ym) setAnchor(monthReq.ym);
+    setSeenReq(monthReq);
+  }
+
   const partnerDays = partner && partner.days ? partner.days : null;
   const sides = partnerDays
     ? [
-        { key: 'me', name: meName, days: records },
-        { key: 'partner', name: partner.name, days: partnerDays },
+        { key: 'me', name: meName, days: records, from: missedFrom },
+        { key: 'partner', name: partner.name, days: partnerDays, from: partner.missedFrom || null },
       ]
-    : [{ key: 'me', name: meName, days: records }];
+    : [{ key: 'me', name: meName, days: records, from: missedFrom }];
 
   const today = todayKey();
   const keys = monthKeysOf(anchor);
@@ -54,10 +160,12 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
     let written = 0;
 
     keys.forEach((k) => {
-      const rec = side.days[k];
+      // "লেখা আছে" গোনা হয় যা সত্যিই লেখা; জরিমানা আর গোনা হয় পেরোনো দিনের
+      // না-লেখাগুলো "পড়েনি" ধরে (lib/prayers.js)
+      const raw = side.days[k];
+      if (raw && PRAYERS.some((p) => raw[p.id]) && k <= today) written += 1;
+      const rec = withAutoMissed(raw, k, today, side.from);
       if (!rec) return;
-      const any = PRAYERS.some((p) => rec[p.id]);
-      if (any && k <= today) written += 1;
       total += dayTotal(rec);
       const c = dayCounts(rec);
       counts.prayed += c.prayed;
@@ -72,7 +180,8 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
     return { ...side, total, counts, perWaqt, written };
   });
 
-  const anyWritten = stats.some((s) => s.written > 0);
+  const anyWritten = stats.some((s) => s.written > 0 || s.total > 0);
+  const settleMonth = settle ? settle.months.find((x) => x.month === anchor) : null;
   const shown = stats.find((s) => s.key === who) || stats[0];
   const lead = firstWeekdayOf(anchor);
 
@@ -115,6 +224,10 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
           </div>
         ))}
       </div>
+
+      {settleMonth && partner ? (
+        <SettleCard m={settleMonth} meName={meName} partnerName={partner.name} onSettle={onSettle} />
+      ) : null}
 
       {!anyWritten ? (
         <div className="empty-note">
@@ -190,7 +303,8 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
             <span className="cal-cell blank" key={'b' + i} />
           ))}
           {keys.map((k) => {
-            const rec = shown.days[k] || null;
+            const raw = shown.days[k] || null;
+            const rec = withAutoMissed(raw, k, today, shown.from);
             const future = k > today;
             const total = dayTotal(rec);
             const marked = rec && PRAYERS.some((p) => rec[p.id]);
@@ -211,7 +325,12 @@ export default function MonthReport({ records, partner, meName, dateKey, onSelec
                 <span className="cal-d">{bnNum(Number(k.slice(8)))}</span>
                 <span className="cal-bars">
                   {PRAYERS.map((p) => (
-                    <i key={p.id} className={'seg ' + ((rec && rec[p.id]) || 'none')} />
+                    <i
+                      key={p.id}
+                      className={
+                        'seg ' + ((rec && rec[p.id]) || 'none') + (rec && rec[p.id] && !(raw && raw[p.id]) ? ' auto' : '')
+                      }
+                    />
                   ))}
                 </span>
                 <span className={'cal-tk' + (total === 0 ? ' zero' : '')}>

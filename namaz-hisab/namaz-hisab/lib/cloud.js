@@ -117,9 +117,17 @@ export const moreQuiz = () =>
 
 /* ---------- দোয়া ও আমলের টিক ---------- */
 
-export const getTicks = () => call('/api/ticks');
-export const setTick = (kind, item, on) =>
-  call('/api/ticks', { method: 'POST', body: JSON.stringify({ kind, item, on }) });
+// day: 'YYYY-MM-DD' — না দিলে আজ
+export const getTicks = (day) => call('/api/ticks' + (day ? '?day=' + day : ''));
+export const getTickMonth = (month) => call('/api/ticks?month=' + month);
+export const setTick = (kind, item, on, day) =>
+  call('/api/ticks', { method: 'POST', body: JSON.stringify({ kind, item, on, day }) });
+
+/* ---------- মাস শেষে জরিমানা মেটানো ---------- */
+
+export const getSettle = () => call('/api/settle');
+export const setSettle = (month, paid) =>
+  call('/api/settle', { method: 'POST', body: JSON.stringify({ month, paid }) });
 
 /* ---------- ড্যাশবোর্ড ---------- */
 

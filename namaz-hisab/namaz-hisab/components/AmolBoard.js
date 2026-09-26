@@ -7,8 +7,30 @@ import { audioUrlByNumber, loadQari } from '../lib/recite';
 import { AMOLS, AMOL_TAGS } from '../lib/content/amols';
 import { DUAS, DUA_CATS } from '../lib/content/duas';
 import { POINTS } from '../lib/points';
-import { bnNum } from '../lib/store';
-import { getTicks, setTick } from '../lib/cloud';
+import {
+  BN_DAYS_SHORT,
+  bnNum,
+  currentYm,
+  firstWeekdayOf,
+  formatDate,
+  formatDayName,
+  formatYm,
+  monthKeysOf,
+  shiftDay,
+  shiftMonth,
+  todayKey,
+  ymOf,
+} from '../lib/store';
+import { getTickMonth, getTicks, setTick } from '../lib/cloud';
+
+// দোয়া ও আমলের খাতা — দিন ধরে, নামাজের খাতার মতো।
+//
+// আগে শুধু আজকেরটা দেখা যেত, আর রাত ১২টা পেরোলেই সেটা পরের দিন হয়ে যেত — রাত
+// সাড়ে এগারোটার আমল ১২টার পরে টিক দিলে সেটা ভুল দিনে উঠত। এখন উপরে তারিখ
+// বদলানো যায়, আর নিচে মাসের খাতায় কোন দিন কতটা হলো দেখা যায়।
+
+// রাত ১২টা থেকে এই সময় পর্যন্ত "গতকালের আমল লিখবেন?" মনে করিয়ে দিই
+const LATE_NIGHT_UNTIL = 5;
 
 function Tick({ on, onClick, busy }) {
   return (
@@ -108,23 +130,133 @@ function Group({ name, done, total, open, onToggle, children }) {
   );
 }
 
+/* ---------- মাসের খাতা ---------- */
+// প্রতিটা দিনে কয়টা দোয়া-আমল হলো — রঙ যত গাঢ়, তত বেশি। চাপ দিলে সেই দিনটা খোলে।
+
+function MonthBook({ day, counts, onPick }) {
+  const [anchor, setAnchor] = useState(() => ymOf(day));
+  const [seen, setSeen] = useState(day);
+  if (seen !== day) {
+    if (ymOf(day) !== ymOf(seen)) setAnchor(ymOf(day));
+    setSeen(day);
+  }
+
+  const [data, setData] = useState({ month: null, days: {} });
+  useEffect(() => {
+    let alive = true;
+    getTickMonth(anchor)
+      .then((d) => alive && setData({ month: anchor, days: d.days || {} }))
+      .catch(() => alive && setData({ month: anchor, days: {} }));
+    return () => {
+      alive = false;
+    };
+  }, [anchor]);
+
+  const today = todayKey();
+  const keys = monthKeysOf(anchor);
+  const lead = firstWeekdayOf(anchor);
+  // এই দিনে যা বদলাল, সার্ভারে আবার না গিয়েই সেটা বসিয়ে নিই
+  const dayCount = (k) => {
+    if (k === day && counts) return counts.dua + counts.amol;
+    const c = data.month === anchor ? data.days[k] : null;
+    return c ? c.dua + c.amol : 0;
+  };
+  let monthTotal = 0;
+  let activeDays = 0;
+  keys.forEach((k) => {
+    const n = dayCount(k);
+    monthTotal += n;
+    if (n > 0) activeDays += 1;
+  });
+
+  return (
+    <>
+      <div className="month-head">
+        <button type="button" className="nav" onClick={() => setAnchor(shiftMonth(anchor, -1))} aria-label="আগের মাস">
+          <ChevronIcon dir="left" />
+        </button>
+        <div className="month-title">
+          <strong>{formatYm(anchor)}</strong>
+          <span>
+            {bnNum(activeDays)} দিনে {bnNum(monthTotal)}টি দোয়া-আমল
+          </span>
+        </div>
+        <button
+          type="button"
+          className="nav"
+          onClick={() => setAnchor(shiftMonth(anchor, 1))}
+          disabled={anchor >= currentYm()}
+          aria-label="পরের মাস"
+        >
+          <ChevronIcon dir="right" />
+        </button>
+      </div>
+
+      <div className="calendar">
+        <div className="cal-week">
+          {BN_DAYS_SHORT.map((d) => (
+            <span className="cal-wd" key={d}>
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="cal-grid">
+          {Array.from({ length: lead }).map((_, i) => (
+            <span className="cal-cell blank" key={'b' + i} />
+          ))}
+          {keys.map((k) => {
+            const n = dayCount(k);
+            const future = k > today;
+            const level = n === 0 ? 0 : n < 5 ? 1 : n < 12 ? 2 : 3;
+            return (
+              <button
+                key={k}
+                type="button"
+                className={
+                  'cal-cell amol-l' +
+                  level +
+                  (k === day ? ' active' : '') +
+                  (k === today ? ' today' : '') +
+                  (future ? ' future' : '')
+                }
+                disabled={future}
+                onClick={() => onPick(k)}
+                aria-label={`${k} — ${n}টি`}
+              >
+                <span className="cal-d">{bnNum(Number(k.slice(8)))}</span>
+                <span className="cal-tk amol-n">{n ? bnNum(n) + 'টি' : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ---------- পুরো পাতা ---------- */
 
 export default function AmolBoard() {
   const [tab, setTab] = useState('dua');
+  const [day, setDay] = useState(todayKey());
   const [openCats, setOpenCats] = useState({});
   const toggleCat = (k) => setOpenCats((o) => ({ ...o, [k]: !o[k] }));
   const [ticks, setTicks] = useState({ dua: [], amol: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [lateNight, setLateNight] = useState(false);
   const [playing, setPlaying] = useState(null); // কোন দোয়া বাজছে
   const audioRef = useRef(null);
   const queueRef = useRef([]);
   const qariRef = useRef(null);
+  const dayRef = useRef(day);
+  dayRef.current = day;
 
   useEffect(() => {
     qariRef.current = loadQari();
+    // সময়টা ফোনের, তাই এখানে — সার্ভারে আঁকার সময় জানা নেই
+    setLateNight(new Date().getHours() < LATE_NIGHT_UNTIL);
     const a = audioRef.current;
     return () => {
       if (a) {
@@ -165,19 +297,31 @@ export default function AmolBoard() {
     });
   }
 
+  // দিন বদলালে সেই দিনের টিক আনি
   useEffect(() => {
-    getTicks()
+    let alive = true;
+    setLoading(true);
+    setMsg('');
+    getTicks(day)
       .then((d) => {
+        if (!alive) return;
         setTicks(d.ticks || { dua: [], amol: [] });
         setLoading(false);
       })
       .catch((err) => {
-        setMsg(err.message || 'আজকের হিসাব আনা গেল না');
+        if (!alive) return;
+        setTicks({ dua: [], amol: [] });
+        setMsg(err.message || 'এই দিনের হিসাব আনা গেল না');
         setLoading(false);
       });
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [day]);
 
   async function toggle(kind, item) {
+    // যে দিনের পাতা খোলা, টিকটা সেই দিনেরই — মাঝপথে দিন বদলালেও
+    const forDay = day;
     const on = !ticks[kind].includes(item);
     setBusy(kind + ':' + item);
     setMsg('');
@@ -187,17 +331,26 @@ export default function AmolBoard() {
       [kind]: on ? [...t[kind], item] : t[kind].filter((x) => x !== item),
     }));
     try {
-      await setTick(kind, item, on);
+      await setTick(kind, item, on, forDay);
     } catch (err) {
-      setTicks((t) => ({
-        ...t,
-        [kind]: on ? t[kind].filter((x) => x !== item) : [...t[kind], item],
-      }));
-      setMsg('টিকটা সার্ভারে রাখা গেল না');
+      if (dayRef.current === forDay) {
+        setTicks((t) => ({
+          ...t,
+          [kind]: on ? t[kind].filter((x) => x !== item) : [...t[kind], item],
+        }));
+      }
+      setMsg(err.message || 'টিকটা সার্ভারে রাখা গেল না');
     }
     setBusy('');
   }
 
+  function goDay(next) {
+    if (next > todayKey()) return;
+    setDay(next);
+  }
+
+  const today = todayKey();
+  const isToday = day === today;
   const duaDone = ticks.dua.length;
   const amolDone = ticks.amol.length;
   const points = duaDone * POINTS.dua + amolDone * POINTS.amol;
@@ -206,8 +359,43 @@ export default function AmolBoard() {
     <main className="shell">
       <PageHead
         title="দোয়া ও আমল"
-        sub={`আজ ${bnNum(duaDone + amolDone)} টি · ${bnNum(points)} পয়েন্ট`}
+        sub={`${isToday ? 'আজ' : formatDate(day)} ${bnNum(duaDone + amolDone)} টি · ${bnNum(points)} পয়েন্ট`}
       />
+
+      <div className="datebar">
+        <button type="button" className="nav" onClick={() => goDay(shiftDay(day, -1))} aria-label="আগের দিন">
+          <ChevronIcon dir="left" />
+        </button>
+        <div className="center">
+          <strong>{isToday ? 'আজ, ' + formatDayName(day) : formatDayName(day)}</strong>
+          <span>{formatDate(day)}</span>
+        </div>
+        <button
+          type="button"
+          className="nav"
+          onClick={() => goDay(shiftDay(day, 1))}
+          disabled={isToday}
+          aria-label="পরের দিন"
+        >
+          <ChevronIcon dir="right" />
+        </button>
+      </div>
+
+      {!isToday ? (
+        <button type="button" className="today-chip" style={{ marginTop: -6, marginBottom: 12 }} onClick={() => setDay(today)}>
+          আজকের দিনে ফিরে যান
+        </button>
+      ) : lateNight ? (
+        // রাত ১২টার একটু পরে — আমলটা হয়তো গতকালের
+        <button
+          type="button"
+          className="today-chip late-chip"
+          style={{ marginTop: -6, marginBottom: 12 }}
+          onClick={() => setDay(shiftDay(today, -1))}
+        >
+          রাত ১২টা পেরিয়েছে — গতকালের আমল লিখবেন? গতকালের খাতা খুলুন
+        </button>
+      ) : null}
 
       <div className="who-tabs">
         <button
@@ -292,7 +480,19 @@ export default function AmolBoard() {
           })
         : null}
 
-      <p className="month-foot">প্রতিদিন রাত ১২টায় টিকগুলো নতুন করে শুরু হয়।</p>
+      <div className="section-title">মাসের খাতা</div>
+      <MonthBook
+        day={day}
+        counts={loading ? null : { dua: duaDone, amol: amolDone }}
+        onPick={(k) => {
+          setDay(k);
+          if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+
+      <p className="month-foot">
+        আগের যেকোনো দিনের দোয়া-আমল লেখা যায় — উপরের তীর বা মাসের খাতায় দিন বেছে নিন।
+      </p>
     </main>
   );
 }
