@@ -81,6 +81,8 @@ npm run dev
 
 Vercel-এ দিলে **Root Directory** হবে `namaz-hisab/namaz-hisab`, আর `DATABASE_URL` বসবে Settings → Environment Variables এ।
 
+নিজের VPS-এ Docker দিয়ে চালাতে (অ্যাপ, PostgreSQL, HTTPS, নোটিফিকেশনের cron আর রোজকার ব্যাকআপ — সব একসাথে): রিপোর [`deploy/README.md`](../../deploy/README.md)। অ্যাপ নিজেই বোঝে Neon না সাধারণ Postgres — `DATABASE_URL` দেখে।
+
 ## কুইজের প্রশ্ন কোথা থেকে
 
 প্রশ্নের তিনটি স্তর। **রোজকার কুইজে সহজ ও মাঝারিই আসে**, আর তার অর্ধেক হাতে লেখা মৌলিক প্রশ্ন — নইলে পুরো দিনটাই সুরার তথ্য হয়ে যেত।

@@ -1,0 +1,12 @@
+# ছবিতে যা যাবে না — গোপন তথ্য, বিল্ডের পুরনো ফল, বড় বাড়তি ফাইল
+node_modules
+.next
+.env
+.env.*
+!.env.local.example
+.hadith-cache
+Dockerfile
+.dockerignore
+npm-debug.log*
+.DS_Store
+Thumbs.db

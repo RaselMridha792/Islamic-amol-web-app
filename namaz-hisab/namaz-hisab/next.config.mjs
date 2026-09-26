@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Docker-এ চালানোর জন্য ছোট, নিজে-চলা বিল্ড (Dockerfile এটা চালু করে)।
+  // Vercel-এ এটা বন্ধ থাকে, সেখানে আগের মতোই বিল্ড হয়।
+  output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
+
   async headers() {
     return [
       {

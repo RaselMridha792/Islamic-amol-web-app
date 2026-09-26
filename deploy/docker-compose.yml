@@ -1,0 +1,145 @@
+# DeenTogether — VPS-এ পুরোটা একসাথে
+#
+#   cd deploy
+#   cp .env.example .env      # তারপর .env এর মানগুলো বসান
+#   docker compose up -d --build
+#
+# পাঁচটা অংশ:
+#   app     — অ্যাপ নিজে (Next.js)
+#   db      — PostgreSQL 18, ডেটা থাকে db-data ভলিউমে
+#   caddy   — (ইচ্ছা হলে) বাইরের দরজা: 80/443, HTTPS নিজে থেকেই নেয় ও নবায়ন করে।
+#             VPS-এ আগে থেকেই অন্য সাইটের জন্য nginx/Caddy/Traefik থাকলে এটা
+#             চালু করবেন না — সেটা দিয়েই ডোমেইনকে 127.0.0.1:APP_PORT-এ পাঠান।
+#             চালু করতে .env-এ COMPOSE_PROFILES=caddy
+#   cron    — প্রতি মিনিটে নামাজের নোটিফিকেশন, দিনে একবার রাতের রিমাইন্ডার
+#   backup  — প্রতিদিন রাত ৩টায় (ঢাকা) ডেটাবেসের পুরো ব্যাকআপ, শেষ ১৪ দিনের থাকে
+#
+# বিস্তারিত: deploy/README.md
+
+name: deentogether
+
+services:
+  app:
+    build:
+      context: ../namaz-hisab/namaz-hisab
+      args:
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+    image: deentogether-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # নিজের db-তে চলে। Neon-এই থাকতে চাইলে .env-এ DATABASE_URL দিন, তখন সেটাই চলে।
+      DATABASE_URL: ${DATABASE_URL:-postgres://deen:${POSTGRES_PASSWORD}@db:5432/deen}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@example.com}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET বসান}
+    # শুধু সার্ভারের ভেতর থেকে (127.0.0.1) খোলা — বাইরের লোক আসে caddy বা
+    # সার্ভারের নিজের nginx/Caddy দিয়ে। অন্য সাইট এই পোর্টে থাকলে APP_PORT বদলান।
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: deen
+      POSTGRES_USER: deen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD বসান}
+    volumes:
+      # Postgres 18-এর ছবিতে ডেটা থাকে /var/lib/postgresql/18/docker — তাই পুরো
+      # /var/lib/postgresql ভলিউমে রাখি
+      - db-data:/var/lib/postgresql
+      - ../backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deen -d deen"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["caddy"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # Vercel-এর cron আর GitHub Actions-এর কাজ এখন এখানেই।
+  # নামাজের নোটিফিকেশন প্রতি মিনিটে দেখা হয় (আগে ৫ মিনিটে) — একই ওয়াক্ত দুবার
+  # যায় না, অ্যাপ নিজেই মনে রাখে। রাতের রিমাইন্ডার দিনে একবার, ঢাকা সময়
+  # রাত ৯টায় (UTC 15:00) — আগের Vercel cron-এর সময়েই।
+  cron:
+    image: alpine:3.22
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET বসান}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        call() {
+          code=$$(wget -q -S -O /dev/null --header "Authorization: Bearer $$CRON_SECRET" "http://app:3000$$1" 2>&1 | sed -n 's/.*HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p' | tail -n 1)
+          echo "$$(date -u +%FT%TZ) $$1 -> $${code:-no answer}"
+        }
+        echo "cron চালু"
+        while true; do
+          call /api/cron/prayer
+          if [ "$$(date -u +%H)" = "15" ] && [ "$$(cat /tmp/remind-day 2>/dev/null)" != "$$(date -u +%F)" ]; then
+            date -u +%F > /tmp/remind-day
+            call /api/cron/remind
+          fi
+          sleep 60
+        done
+
+  # প্রতিদিন রাত ৩টায় (ঢাকা, UTC 21:00) পুরো ডেটাবেসের ব্যাকআপ → ../backups/auto/
+  # শেষ ১৪টা রাখে, পুরনোগুলো মুছে দেয়। হাতে নিতে চাইলে: ./backup.sh
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: deen
+      PGDATABASE: deen
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD বসান}
+    volumes:
+      - ../backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /backups/auto
+        echo "backup চালু"
+        while true; do
+          if [ "$$(date -u +%H)" = "21" ] && [ "$$(cat /tmp/backup-day 2>/dev/null)" != "$$(date -u +%F)" ]; then
+            f=/backups/auto/deen-$$(date -u +%F).dump
+            if pg_dump --format=custom --compress=9 --no-owner --no-privileges --file="$$f.part" && mv "$$f.part" "$$f"; then
+              date -u +%F > /tmp/backup-day
+              echo "$$(date -u +%FT%TZ) saved $$f"
+              ls -1t /backups/auto/deen-*.dump | tail -n +15 | xargs -r rm -f
+            else
+              rm -f "$$f.part"
+              echo "$$(date -u +%FT%TZ) backup FAILED, will retry"
+            fi
+          fi
+          sleep 300
+        done
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

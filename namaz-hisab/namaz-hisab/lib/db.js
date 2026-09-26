@@ -1,13 +1,84 @@
 import { neon } from '@neondatabase/serverless';
 
 // শুধু সার্ভারে চলে — DATABASE_URL কখনো ব্রাউজারে যায় না
+//
+// দুই রকম ডেটাবেসে চলে:
+//   • Neon (…neon.tech) — Neon-এর HTTP পথে, Vercel-এ যেমন চলছে
+//   • অন্য যেকোনো Postgres (যেমন VPS-এ Docker-এর ভেতরে) — সাধারণ pg সংযোগে
+// দুটোর চেহারা একই — sql`…`, sql.query(text, params), sql.transaction([...]) —
+// তাই বাকি কোড জানেই না কোনটা চলছে। DB_DRIVER=neon বা pg দিয়ে জোর করেও বাছা যায়।
 let cached = null;
+
+function isNeon(url) {
+  const forced = process.env.DB_DRIVER;
+  if (forced === 'neon' || forced === 'pg') return forced === 'neon';
+  try {
+    return new URL(url).hostname.endsWith('.neon.tech');
+  } catch (err) {
+    return false;
+  }
+}
+
+// সাধারণ Postgres, Neon-এর মতো করে সাজানো। pg প্যাকেজ কেবল এখানেই, আর
+// প্রথম প্রশ্নের সময়ই নামে — Vercel-এ Neon চললে ওটা কখনো লোডই হয় না।
+function pgSql(url) {
+  let pool = null;
+  const getPool = async () => {
+    if (!pool) {
+      const { default: pg } = await import('pg');
+      pool = new pg.Pool({ connectionString: url, max: Number(process.env.DB_POOL_MAX) || 10 });
+    }
+    return pool;
+  };
+  const run = async (text, values) => (await (await getPool()).query(text, values)).rows;
+
+  // neon-এর মতোই sql`…` সাথে সাথে চলে না: await করলে চলে, আর transaction-এ
+  // দিলে সেখানে একসাথে চলে। একবারই চলে, যতবারই then ডাকা হোক।
+  function sql(strings, ...values) {
+    let text = strings[0];
+    values.forEach((v, i) => {
+      text += '$' + (i + 1) + strings[i + 1];
+    });
+    let started = null;
+    const go = () => started || (started = run(text, values));
+    return {
+      text,
+      values,
+      then: (ok, bad) => go().then(ok, bad),
+      catch: (bad) => go().catch(bad),
+      finally: (fn) => go().finally(fn),
+    };
+  }
+
+  sql.query = (text, params = []) => run(text, params);
+
+  sql.transaction = async (queries) => {
+    const client = await (await getPool()).connect();
+    try {
+      await client.query('begin');
+      const out = [];
+      for (const q of queries) {
+        // eslint-disable-next-line no-await-in-loop
+        out.push((await client.query(q.text, q.values)).rows);
+      }
+      await client.query('commit');
+      return out;
+    } catch (err) {
+      await client.query('rollback').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  };
+
+  return sql;
+}
 
 export function db() {
   if (cached) return cached;
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL missing');
-  cached = neon(url);
+  cached = isNeon(url) ? neon(url) : pgSql(url);
   return cached;
 }
 

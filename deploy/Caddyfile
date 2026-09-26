@@ -1,0 +1,8 @@
+# বাইরের দরজা। DOMAIN-এর DNS এই সার্ভারের দিকে থাকলে Caddy নিজে থেকেই
+# Let's Encrypt থেকে HTTPS সার্টিফিকেট নেয় আর সময়মতো নবায়ন করে।
+# অ্যাপের নোটিফিকেশন আর অফলাইনে চলা (service worker) HTTPS ছাড়া চলে না।
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
