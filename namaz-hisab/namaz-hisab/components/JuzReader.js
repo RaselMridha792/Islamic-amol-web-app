@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckIcon, ChevronIcon, ListIcon, PauseIcon, PlayIcon, SpinIcon } from './Icons';
-import { JUZ_NAMES, SURAHS, globalAyah, juzParts } from '../lib/quranMeta';
+import { JUZ_NAMES, SURAHS, juzParts } from '../lib/quranMeta';
 import { surahBn } from '../lib/content/surahNames';
 import { toBanglaUccharon } from '../lib/uccharon';
 import { ayahAudioUrl } from '../lib/recite';
@@ -152,6 +152,23 @@ export default function JuzReader({ juz, qari, onBack, onGo, marks, busy, onTogg
     return () => io.disconnect();
   }, [visible.length]);
 
+  // পারা বা কারী বদলালে যা বাজছিল থামাই — সুরার পাতায় যেমন
+  useEffect(() => {
+    const el = audioRef.current;
+    if (el) {
+      el.pause();
+      el.removeAttribute('src');
+    }
+    setPlaying(null);
+    setLoading(null);
+    return () => {
+      if (el) {
+        el.pause();
+        el.removeAttribute('src');
+      }
+    };
+  }, [juz, qari]);
+
   function playAyah(surah, ayah) {
     const el = audioRef.current;
     const key = surah + ':' + ayah;
@@ -163,7 +180,9 @@ export default function JuzReader({ juz, qari, onBack, onGo, marks, busy, onTogg
     }
     setAudioMsg('');
     setLoading(key);
-    el.src = ayahAudioUrl(qari, globalAyah(surah, ayah));
+    // ayahAudioUrl(সুরা, আয়াত, কারী) — আগে এখানে উল্টো ক্রমে দেওয়া ছিল
+    // (কারী, বিশ্বজোড়া নম্বর), ফলে ঠিকানাটা ভুল হতো আর পারার পাতায় কিছুই বাজত না
+    el.src = ayahAudioUrl(surah, ayah, qari);
     el.play()
       .then(() => {
         setPlaying(key);
@@ -171,6 +190,7 @@ export default function JuzReader({ juz, qari, onBack, onGo, marks, busy, onTogg
       })
       .catch(() => {
         setLoading(null);
+        setPlaying(null);
         setAudioMsg('তিলাওয়াতটা বাজানো গেল না — নেট দেখে আবার চেষ্টা করুন');
       });
   }
