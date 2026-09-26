@@ -67,7 +67,24 @@ real person's data, and there is nobody to absorb a mistake.
 ## How a change reaches production
 
 **A push deploys nothing.** There is no CI for this app and nothing watches
-the repository. Somebody runs this on the VPS:
+the repository — the owner chose to keep it manual for now. Somebody runs
+this on the VPS:
+
+```bash
+cd /opt/deen && git pull && ./deploy/update.sh
+```
+
+`update.sh` takes a `pg_dump` first (`backups/pre-update-*.dump`, last 5 kept)
+and refuses to go on without one, runs `docker compose up -d --build`, waits
+for the app to be healthy, checks that `ensureSchema` went through (an
+unauthenticated `/api/touch` must answer 401, not 503), and only then removes
+images carrying `com.docker.compose.project=deentogether` that no container
+uses. It never touches volumes and never prunes build cache — that cache is
+shared by every site on the machine and cannot be split by project. On the
+VPS's containerd image store a rebuilt image replaces the old one outright,
+so that last step is usually a no-op; it is there for the classic store.
+
+The bare form still works and is what `update.sh` runs in the middle:
 
 ```bash
 cd /opt/deen && git pull && cd deploy && docker compose up -d --build
@@ -111,6 +128,20 @@ Two things about that command are load-bearing:
   a session cookie and a push subscription each belong to an ORIGIN, so both
   people had to sign in again and turn notifications on again, and the rows
   in `nh_push` made under the old origin had to go.
+- **An unwritten prayer on a past day counts as missed, but is never stored.**
+  `withAutoMissed` in `lib/prayers.js` fills it in at read time — in the prayer
+  page, the month calendar, the dashboard and the monthly settlement alike. Do
+  not "simplify" this into a job that writes `missed` rows: `nh_days` syncs a
+  whole day at a time, newest wins, so a server-written `missed` would silently
+  overwrite a `prayed` that a phone tapped offline just before midnight. The
+  rule starts at `nh_users.missed_from` (the day the column arrived, for the
+  two existing people), so past months did not change when it shipped.
+- **`gate.user.id` is a number.** `bigint` columns come back from Postgres as
+  strings; `userFromToken` converts the id so that `Number(row.id) === me`
+  means something. Until 26 Sep 2026 it did not, and three comparisons were
+  silently false: the settlement never found the pair, a seen drawing was never
+  marked seen, and a user could join their own pairing code. Other ids you read
+  from a row are still strings — wrap them in `Number()` before comparing.
 - **Postgres 18 keeps its data under `/var/lib/postgresql/18/docker`** and the
   compose file mounts the whole `/var/lib/postgresql`. Do not "fix" it to
   `/var/lib/postgresql/data`.
