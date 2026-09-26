@@ -65,7 +65,10 @@ export async function userFromToken(token) {
   `;
   if (!rows[0]) return null;
   return {
-    id: rows[0].id,
+    // bigint ডেটাবেস থেকে লেখা ("31") হয়ে আসে। সংখ্যা করে দিই — নইলে
+    // Number(x) === id জাতীয় তুলনা চুপচাপ মিথ্যা হয়ে যায় (জোড়া খুঁজে না পাওয়া,
+    // আঁকা "দেখা হয়েছে" না হওয়া, নিজের কোডে নিজে জোড়া বাঁধা)
+    id: Number(rows[0].id),
     username: rows[0].username,
     name: rows[0].display_name || rows[0].username,
     partnerId: rows[0].partner_id ? Number(rows[0].partner_id) : null,
