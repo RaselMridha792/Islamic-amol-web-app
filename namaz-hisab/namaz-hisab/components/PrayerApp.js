@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PrayerCard from './PrayerCard';
 import MonthReport from './MonthReport';
@@ -9,9 +10,10 @@ import Avatar from './Avatar';
 import { useAuth } from './AuthProvider';
 import InstallButton from './InstallButton';
 import Preloader from './Preloader';
-import { ChevronIcon, CloudIcon } from './Icons';
+import { CheckIcon, ChevronIcon, CloudIcon, MoonIcon } from './Icons';
 import { PRAYERS, STATUS_MAP, dayTotal, dayFilled, isAutoMissed, withAutoMissed } from '../lib/prayers';
 import { playSound, warmUpAudio } from '../lib/sound';
+import { TAHAJJUD_KEY, prayedTahajjud } from '../lib/tahajjud';
 import { getSettle, mergeRecords, pullAll, pushChanges, setSettle } from '../lib/cloud';
 import {
   bnNum,
@@ -268,6 +270,29 @@ export default function PrayerApp() {
     [dateKey, missedFrom, pushToast, queueDay, soundOn]
   );
 
+  // তাহাজ্জুদ — একই দিনের লেখাতেই একটা চিহ্ন (lib/tahajjud.js), জরিমানায় ঢোকে না
+  const toggleTahajjud = useCallback(() => {
+    warmUpAudio();
+    const base = recordsRef.current[dateKey] || EMPTY;
+    const nextDay = { ...base };
+    const was = prayedTahajjud(base);
+    if (was) delete nextDay[TAHAJJUD_KEY];
+    else nextDay[TAHAJJUD_KEY] = true;
+    const next = { ...recordsRef.current, [dateKey]: nextDay };
+    recordsRef.current = next;
+    metaRef.current = { ...metaRef.current, [dateKey]: Date.now() };
+    saveRecords(next);
+    saveMeta(metaRef.current);
+    setRecords(next);
+    queueDay(dateKey);
+    playSound(was ? 'clear' : 'prayed', soundOn);
+    pushToast(
+      was
+        ? { tone: 'info', title: 'তাহাজ্জুদ খালি', body: 'এই দিনের চিহ্ন তুলে নেওয়া হলো' }
+        : { tone: 'good', title: 'তাহাজ্জুদ পড়েছেন', body: 'আলহামদুলিল্লাহ — আল্লাহ কবুল করুন' }
+    );
+  }, [dateKey, pushToast, queueDay, soundOn]);
+
   // আগের কোনো মাসের জরিমানা মেটানো হলো / বাতিল
   const handleSettle = useCallback(
     async (month, paid) => {
@@ -417,6 +442,48 @@ export default function PrayerApp() {
             />
           ))}
         </div>
+
+        {/* তাহাজ্জুদ — পাঁচ ওয়াক্তের পরে, রাতের নফল */}
+        <section className="card tj-card">
+          <header className="card-head">
+            <div className="waqt-badge">
+              <MoonIcon />
+            </div>
+            <div className="card-title">
+              <div className="name">তাহাজ্জুদ</div>
+              <div className="sub">
+                রাতের নফল · এ মাসে{' '}
+                {bnNum(
+                  Object.keys(records).filter((k) => k.slice(0, 7) === dateKey.slice(0, 7) && prayedTahajjud(records[k]))
+                    .length
+                )}{' '}
+                রাত
+              </div>
+            </div>
+            <div className="arabic">التهجد</div>
+          </header>
+          <div className="tj-card-row">
+            <button
+              type="button"
+              className={'choice good' + (prayedTahajjud(stored) ? ' on' : '')}
+              aria-pressed={prayedTahajjud(stored)}
+              onClick={toggleTahajjud}
+            >
+              <span className="dot" />
+              পড়েছি
+              <CheckIcon size={14} />
+            </button>
+            {partner ? (
+              <span className="tj-card-partner">
+                {partner.name}: {prayedTahajjud(storedTheirs) ? 'পড়েছেন' : 'লেখেননি'}
+              </span>
+            ) : null}
+          </div>
+          <Link href="/tahajjud" className="tj-card-link">
+            নিয়ত, রিজিকের দোয়া আর পুরো খাতা
+            <ChevronIcon dir="right" size={15} />
+          </Link>
+        </section>
 
         <div ref={monthRef}>
           <MonthReport

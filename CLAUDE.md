@@ -136,6 +136,12 @@ Two things about that command are load-bearing:
   overwrite a `prayed` that a phone tapped offline just before midnight. The
   rule starts at `nh_users.missed_from` (the day the column arrived, for the
   two existing people), so past months did not change when it shipped.
+- **Tahajjud lives in the same day record and must stay out of `PRAYERS`.**
+  It is `tahajjud: true` beside `fajr` … `isha` in `nh_days.data`
+  (`lib/tahajjud.js`). Fines, the monthly settlement, `withAutoMissed`, the
+  cron reminders and "x/5 written" all count `PRAYERS` only, which is what
+  keeps a voluntary night prayer from ever fining anyone. Adding it to
+  `PRAYERS` would fine every night it was skipped.
 - **`gate.user.id` is a number.** `bigint` columns come back from Postgres as
   strings; `userFromToken` converts the id so that `Number(row.id) === me`
   means something. Until 26 Sep 2026 it did not, and three comparisons were

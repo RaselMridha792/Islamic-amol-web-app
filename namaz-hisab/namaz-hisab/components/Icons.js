@@ -261,3 +261,13 @@ export function VibrateIcon({ size = 18 }) {
     </svg>
   );
 }
+
+// রাত — তাহাজ্জুদ
+export function MoonIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19.5 14.6A7.5 7.5 0 0 1 9.4 4.5a7.9 7.9 0 1 0 10.1 10.1Z" />
+      <path d="m17.2 3.6.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6.6-1.5Z" />
+    </svg>
+  );
+}

@@ -157,7 +157,8 @@ function BottomNav() {
   return (
     <nav className="tabbar" aria-label="প্রধান মেনু">
       {TABS.map(({ href, label, Icon }) => {
-        const on = href === '/' ? path === '/' : path.startsWith(href);
+        // তাহাজ্জুদের পাতা নামাজের খাতারই অংশ
+        const on = href === '/' ? path === '/' || path.startsWith('/tahajjud') : path.startsWith(href);
         return (
           <Link key={href} href={href} className={'tab' + (on ? ' on' : '')}>
             <Icon size={20} />

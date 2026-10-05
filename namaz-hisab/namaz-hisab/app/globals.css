@@ -152,6 +152,12 @@ button {
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
+/* লিংক হলেও (যেমন তাহাজ্জুদের পাতায় ফেরার তীর) বোতামের মতোই দেখায় */
+a.icon-btn {
+  color: var(--pink-soft);
+  text-decoration: none;
+}
+
 .icon-btn:hover {
   border-color: var(--line-strong);
   background: var(--panel-2);
@@ -3886,4 +3892,206 @@ html.lite .tj-hi {
 .cal-cell.active.amol-l2,
 .cal-cell.active.amol-l3 {
   background: rgba(255, 61, 130, 0.16);
+}
+
+/* ================= তাহাজ্জুদ ================= */
+
+/* নামাজের খাতায় — পাঁচ ওয়াক্তের পরের কার্ড */
+.tj-card .waqt-badge {
+  color: var(--gold);
+}
+
+.tj-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 4px;
+}
+
+.tj-card-row .choice {
+  width: auto;
+  flex: none;
+  padding-right: 14px;
+}
+
+.tj-card-row .choice svg {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.tj-card-partner {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.tj-card-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 14px 14px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--pink-soft);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* তাহাজ্জুদের পাতা — আজ পড়েছি */
+.tj-mark-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(231, 194, 125, 0.12), transparent 60%),
+    var(--panel);
+}
+
+.tj-mark-card.on {
+  border-color: rgba(53, 199, 154, 0.45);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(53, 199, 154, 0.16), transparent 60%),
+    var(--panel);
+}
+
+.tj-moon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--arch);
+  border: 1px solid rgba(231, 194, 125, 0.4);
+  color: var(--gold);
+}
+
+.tj-mark-card.on .tj-moon {
+  border-color: rgba(53, 199, 154, 0.5);
+  color: var(--good);
+}
+
+.tj-mark-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tj-mark-text b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tj-mark-text small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.tj-mark-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(160deg, var(--pink), #b81f5c);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.tj-mark-btn.on {
+  background: var(--good);
+  color: #06231a;
+}
+
+.tj-partner {
+  margin: 8px 2px 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.tj-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tj-stats > div {
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-align: center;
+}
+
+.tj-stats b {
+  display: block;
+  font-family: var(--serif);
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.tj-stats small {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.cal-cell.tj-on {
+  background: rgba(231, 194, 125, 0.16);
+}
+
+.cal-cell.active.tj-on {
+  background: rgba(255, 61, 130, 0.16);
+}
+
+.tj-mark {
+  color: var(--gold);
+}
+
+.tj-niyyah .tj-note {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.tj-guide {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.tj-guide-row {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 10px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tj-guide-row:first-child {
+  border-top: none;
+}
+
+.tj-guide-row b {
+  font-weight: 600;
+  color: var(--gold);
 }
